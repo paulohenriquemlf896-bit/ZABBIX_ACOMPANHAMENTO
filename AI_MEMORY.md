@@ -68,11 +68,26 @@ anteriores (o histórico de mudança de estado vive no
   nunca uma paleta genérica inventada. Testes em
   `src/tests/test_web_app.py` (`TestMontarGraficoRanking`).
   Validado manualmente contra o Zabbix real em 2026-07-28.
+- **Histórico de ocorrências (drill-down)** — cada linha do ranking (e do
+  gráfico de barras) é clicável e leva a `GET /historico?periodo=...&visao=...&chave=...`:
+  quando cada ocorrência começou, quando terminou e quanto durou, com
+  gráfico de frequência por dia (ajuda a achar dias de pico). Endpoint
+  JSON equivalente em `GET /api/relatorios/historico`. Motivado por uma
+  investigação real do usuário (trigger "Acesso Nutrane está fora do ar",
+  ver `contexto/servidores.md`) que descobriu, ao vivo contra a API, que
+  a API do Zabbix não devolve o horário de resolução direto em
+  `event.get` (só o `r_eventid` — achado registrado em `contexto/api.md`).
+  Spec: `specs/historico_ocorrencias.md`. Testes: 21 casos novos entre
+  `src/tests/test_relatorios_service.py`,
+  `src/tests/test_web_service_relatorios.py` e `src/tests/test_web_app.py`.
+  Suite completa do projeto: 114 testes. Validado manualmente contra o
+  Zabbix real em 2026-07-28 (o total do histórico bateu exatamente com o
+  total mostrado na linha do ranking que originou o clique).
 
 ## Funcionalidades em andamento
 
-- Nenhuma no momento (última tarefa concluída: escopo inicial do painel
-  web, 2026-07-28).
+- Nenhuma no momento (última tarefa concluída: histórico de ocorrências
+  no painel, 2026-07-28).
 
 ## Funcionalidades futuras (planejadas, com spec já escrita)
 
@@ -96,7 +111,11 @@ Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
 - Investigação de capacidade do host `SRV-FORTES` (memória/disco/CPU
   recorrentemente no limite — ver `contexto/servidores.md`).
 - Investigação de estabilidade da aplicação/rede do host `Siagri
-  Nutrane` (alertas de indisponibilidade em tendência de piora).
+  Nutrane` (alertas de indisponibilidade em tendência de piora) —
+  **parcialmente avançada em 2026-07-28**: dados de padrão (flapping,
+  duração, dias de pico) já levantados, ver `contexto/servidores.md`;
+  falta a causa raiz (correlacionar com rotina/job da aplicação ou da
+  rede), que exige acesso fora deste projeto.
 
 ## Dívidas técnicas
 

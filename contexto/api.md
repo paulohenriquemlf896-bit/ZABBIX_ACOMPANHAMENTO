@@ -46,6 +46,15 @@ uma nova peculiaridade for descoberta.
   descoberta (fora da macro do template), ela convive com a macro, mas é
   fácil ficar inconsistente entre hosts (foi o que causou o problema do
   GoogleUpdater — ver `docs/adr/002-correcao-ruido-googleupdater.md`).
+- **`event.get` não devolve o horário de resolução direto.** O evento de
+  PROBLEMA (`value=1`) tem o campo `r_eventid` (eventid do evento de
+  recuperação/OK, `"0"` se ainda não resolvido), mas **não** tem
+  `r_clock` — pedir `r_clock` no `output` dá erro `Invalid params`. Para
+  saber quando um problema foi resolvido, é preciso uma segunda chamada
+  `event.get` com `eventids` = os `r_eventid` coletados, pegando o
+  `clock` desses eventos de recuperação. Descoberto implementando o
+  histórico de ocorrências (`specs/historico_ocorrencias.md`,
+  `buscar_resolucoes()` em `src/relatorios_service.py`).
 
 ## Estrutura de resposta padrão
 

@@ -14,7 +14,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from services.relatorios import dados_periodo, VISOES  # noqa: E402
+from services.relatorios import dados_periodo, historico_grupo, VISOES, CHAVE_MAX_CARACTERES  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from logging_util import configurar_logging  # noqa: E402
@@ -62,3 +62,38 @@ def relatorios_dados():
         log.error("Erro inesperado em /api/relatorios/dados (periodo=%s, visao=%s)", periodo, visao, exc_info=True)
         return jsonify({"ok": False, "dados": None,
                          "erro": "Nao foi possivel obter os dados. Tente novamente."}), 500
+
+
+@bp_api.route("/relatorios/historico", methods=["GET"])
+def relatorios_historico():
+    """Historico de ocorrencias (drill-down) de um problema/host
+    especifico — ver specs/historico_ocorrencias.md."""
+    periodo = request.args.get("periodo", "7d")
+    if periodo not in PERIODOS_VALIDOS:
+        return jsonify({"ok": False, "dados": None,
+                         "erro": "Parametro 'periodo' invalido."}), 400
+
+    visao = request.args.get("visao", "problema")
+    if visao not in VISOES:
+        return jsonify({"ok": False, "dados": None,
+                         "erro": "Parametro 'visao' invalido."}), 400
+
+    chave = request.args.get("chave", "")
+    if not chave or len(chave) > CHAVE_MAX_CARACTERES:
+        return jsonify({"ok": False, "dados": None,
+                         "erro": "Parametro 'chave' ausente ou invalido."}), 400
+
+    inicio = time.monotonic()
+    try:
+        itens = historico_grupo(periodo, visao, chave)
+        duracao = time.monotonic() - inicio
+        if duracao > LIMIAR_LENTIDAO_SEGUNDOS:
+            log.warning("Historico lento: periodo=%s visao=%s levou %.1fs", periodo, visao, duracao)
+        return jsonify({"ok": True, "dados": {"itens": itens}, "erro": None})
+    except RuntimeError as e:
+        log.warning("Falha ao obter historico (periodo=%s, visao=%s, chave=%s): %s", periodo, visao, chave, e)
+        return jsonify({"ok": False, "dados": None, "erro": str(e)}), 200
+    except Exception:  # noqa: BLE001 — borda HTTP: nunca vaza stacktrace
+        log.error("Erro inesperado em /api/relatorios/historico (periodo=%s, visao=%s)", periodo, visao, exc_info=True)
+        return jsonify({"ok": False, "dados": None,
+                         "erro": "Nao foi possivel obter o historico. Tente novamente."}), 500

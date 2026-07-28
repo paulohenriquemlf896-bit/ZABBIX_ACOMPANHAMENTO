@@ -40,8 +40,12 @@ from flask import Flask, render_template, request  # noqa: E402
 
 from api import bp_api  # noqa: E402
 from logging_util import configurar_logging  # noqa: E402
-from relatorios_service import PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts  # noqa: E402
-from services.relatorios import dados_periodo, TTL_SEGUNDOS, VISOES  # noqa: E402
+from relatorios_service import (  # noqa: E402
+    PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts, fmt_duracao,
+)
+from services.relatorios import (  # noqa: E402
+    dados_periodo, historico_grupo, TTL_SEGUNDOS, VISOES, CHAVE_MAX_CARACTERES,
+)
 from zbx_api import call  # noqa: E402
 
 # =========================================================================
@@ -84,6 +88,43 @@ def montar_grafico_ranking(ranking: list[dict], visao: str) -> list[dict]:
         }
         for g in subset
     ]
+
+
+def montar_grafico_dias(itens: list[dict]) -> list[dict]:
+    """Agrupa o historico de ocorrencias por dia (dd/mm) para o
+    mini-grafico de frequencia do drill-down — ajuda a identificar dias
+    de pico (foi exatamente essa pergunta que motivou a funcionalidade,
+    ver docs/CHANGELOG.md e specs/historico_ocorrencias.md).
+    """
+    if not itens:
+        return []
+    contagem = {}
+    ordem = []
+    for it in reversed(itens):  # itens vem do mais recente pro mais antigo; queremos ordem cronologica
+        dia = datetime.fromtimestamp(it["inicio"]).strftime("%d/%m")
+        if dia not in contagem:
+            ordem.append(dia)
+        contagem[dia] = contagem.get(dia, 0) + 1
+    maior = max(contagem.values())
+    return [
+        {"dia": d, "ocorrencias": contagem[d], "largura_pct": contagem[d] / maior * 100}
+        for d in ordem
+    ]
+
+
+def resumo_historico(itens: list[dict]) -> dict:
+    """Resumo estatistico do historico de ocorrencias: total, quantas
+    ainda estao abertas, duracao media/minima/maxima das resolvidas (ja
+    formatadas para exibicao) — pronto para o template."""
+    total = len(itens)
+    duracoes = [it["duracao_segundos"] for it in itens if it["duracao_segundos"] is not None]
+    resumo = {"total": total, "abertas": total - len(duracoes), "resolvidas": len(duracoes),
+              "duracao_media": None, "duracao_min": None, "duracao_max": None}
+    if duracoes:
+        resumo["duracao_media"] = fmt_duracao(round(sum(duracoes) / len(duracoes)))
+        resumo["duracao_min"] = fmt_duracao(min(duracoes))
+        resumo["duracao_max"] = fmt_duracao(max(duracoes))
+    return resumo
 
 
 @app.route("/", methods=["GET"])
@@ -132,6 +173,63 @@ def pagina_relatorios():
     contexto["dados"] = dados
     contexto["grafico_ranking"] = montar_grafico_ranking(dados["ranking"], visao)
     return render_template("index.html", **contexto)
+
+
+@app.route("/historico", methods=["GET"])
+def pagina_historico():
+    """Drill-down de uma linha do ranking: quando cada ocorrencia comecou,
+    quando terminou e quanto durou — ver specs/historico_ocorrencias.md."""
+    periodo = request.args.get("periodo", "7d")
+    if periodo not in PERIODOS:
+        periodo = "7d"
+
+    visao = request.args.get("visao", "problema")
+    if visao not in VISOES:
+        visao = "problema"
+
+    chave = request.args.get("chave", "")
+
+    contexto = {
+        "periodos": PERIODOS,
+        "titulos_periodo": TITULOS_PERIODO,
+        "periodo_atual": periodo,
+        "visoes": VISOES,
+        "titulos_visao": TITULOS_VISAO,
+        "visao_atual": visao,
+        "chave": chave,
+        "sev_nome": SEV_NOME,
+        "sev_cor": SEV_COR,
+        "auto_refresh_segundos": TTL_SEGUNDOS,
+        "itens": [],
+        "erro": None,
+        "grafico_dias": [],
+        "resumo": None,
+    }
+
+    if not chave or len(chave) > CHAVE_MAX_CARACTERES:
+        contexto["erro"] = "Nenhum problema/host valido selecionado."
+        return render_template("historico.html", **contexto)
+
+    inicio = time.monotonic()
+    try:
+        itens = historico_grupo(periodo, visao, chave)
+    except RuntimeError as e:
+        log.warning("Falha ao obter historico (periodo=%s, visao=%s, chave=%s): %s", periodo, visao, chave, e)
+        contexto["erro"] = str(e)
+        return render_template("historico.html", **contexto)
+    duracao = time.monotonic() - inicio
+    if duracao > LIMIAR_LENTIDAO_SEGUNDOS:
+        log.warning("Historico lento: periodo=%s visao=%s chave=%s levou %.1fs", periodo, visao, chave, duracao)
+
+    for it in itens:
+        it["inicio_fmt"] = fmt_ts(it["inicio"])
+        it["fim_fmt"] = fmt_ts(it["fim"]) if it["fim"] is not None else None
+        it["duracao_fmt"] = fmt_duracao(it["duracao_segundos"]) if it["duracao_segundos"] is not None else None
+
+    contexto["itens"] = itens
+    contexto["grafico_dias"] = montar_grafico_dias(itens)
+    contexto["resumo"] = resumo_historico(itens)
+    return render_template("historico.html", **contexto)
 
 
 @app.route("/health", methods=["GET"])

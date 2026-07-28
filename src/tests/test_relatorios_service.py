@@ -149,6 +149,104 @@ class TestAgregarPorHost(unittest.TestCase):
         self.assertEqual(ranking[0]["problemas"], {"Problema A", "Problema B"})
 
 
+class TestEventosDoGrupo(unittest.TestCase):
+    """Ver specs/historico_ocorrencias.md."""
+
+    def test_visao_problema_filtra_pelo_nome_exato(self):
+        eventos = [
+            {"clock": 100, "name": "A", "severity": 1, "hosts": []},
+            {"clock": 101, "name": "B", "severity": 1, "hosts": []},
+        ]
+        r = rs.eventos_do_grupo(eventos, "problema", "A", desde_ts=0)
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["name"], "A")
+
+    def test_visao_host_filtra_por_host_presente_na_lista(self):
+        eventos = [
+            {"clock": 100, "name": "X", "severity": 1, "hosts": [{"name": "Host A"}, {"name": "Host B"}]},
+            {"clock": 101, "name": "Y", "severity": 1, "hosts": [{"name": "Host B"}]},
+        ]
+        r = rs.eventos_do_grupo(eventos, "host", "Host A", desde_ts=0)
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["name"], "X")
+
+    def test_evento_fora_da_janela_e_ignorado(self):
+        eventos = [{"clock": 50, "name": "A", "severity": 1, "hosts": []}]
+        r = rs.eventos_do_grupo(eventos, "problema", "A", desde_ts=100)
+        self.assertEqual(r, [])
+
+    def test_ordenado_do_mais_recente_para_o_mais_antigo(self):
+        eventos = [
+            {"clock": 100, "name": "A", "severity": 1, "hosts": []},
+            {"clock": 300, "name": "A", "severity": 1, "hosts": []},
+            {"clock": 200, "name": "A", "severity": 1, "hosts": []},
+        ]
+        r = rs.eventos_do_grupo(eventos, "problema", "A", desde_ts=0)
+        self.assertEqual([int(e["clock"]) for e in r], [300, 200, 100])
+
+
+class TestBuscarResolucoes(unittest.TestCase):
+
+    def test_lista_vazia_nao_chama_api(self):
+        with patch("relatorios_service.call") as mock_call:
+            r = rs.buscar_resolucoes([], token="abc")
+            self.assertEqual(r, {})
+            mock_call.assert_not_called()
+
+    def test_ignora_eventids_zero(self):
+        with patch("relatorios_service.call") as mock_call:
+            r = rs.buscar_resolucoes(["0", "0"], token="abc")
+            self.assertEqual(r, {})
+            mock_call.assert_not_called()
+
+    @patch("relatorios_service.call")
+    def test_sucesso_devolve_dict_eventid_para_clock(self, mock_call):
+        mock_call.return_value = {"result": [{"eventid": "55", "clock": "1000"}]}
+        r = rs.buscar_resolucoes(["55"], token="abc")
+        self.assertEqual(r, {"55": 1000})
+
+    @patch("relatorios_service.call")
+    def test_erro_na_chamada_devolve_dict_vazio(self, mock_call):
+        mock_call.return_value = {"__error__": "Conexao: timed out"}
+        r = rs.buscar_resolucoes(["55"], token="abc")
+        self.assertEqual(r, {})
+
+
+class TestHistorico(unittest.TestCase):
+
+    @patch("relatorios_service.call")
+    def test_ocorrencia_resolvida_tem_duracao(self, mock_call):
+        mock_call.return_value = {"result": [{"eventid": "99", "clock": "1044"}]}
+        eventos = [{"clock": "1000", "name": "A", "severity": 2, "hosts": [], "r_eventid": "99"}]
+        itens = rs.historico(eventos, "problema", "A", desde_ts=0, token="abc")
+        self.assertEqual(itens[0]["inicio"], 1000)
+        self.assertEqual(itens[0]["fim"], 1044)
+        self.assertEqual(itens[0]["duracao_segundos"], 44)
+
+    def test_ocorrencia_ainda_aberta_nao_tem_fim_nem_duracao(self):
+        eventos = [{"clock": "1000", "name": "A", "severity": 2, "hosts": [], "r_eventid": "0"}]
+        itens = rs.historico(eventos, "problema", "A", desde_ts=0, token="abc")
+        self.assertIsNone(itens[0]["fim"])
+        self.assertIsNone(itens[0]["duracao_segundos"])
+
+    def test_chave_sem_correspondencia_devolve_lista_vazia(self):
+        eventos = [{"clock": "1000", "name": "A", "severity": 2, "hosts": [], "r_eventid": "0"}]
+        itens = rs.historico(eventos, "problema", "Nao existe", desde_ts=0, token="abc")
+        self.assertEqual(itens, [])
+
+
+class TestFmtDuracao(unittest.TestCase):
+
+    def test_menos_de_um_minuto(self):
+        self.assertEqual(rs.fmt_duracao(44), "44s")
+
+    def test_minutos_e_segundos(self):
+        self.assertEqual(rs.fmt_duracao(367), "6m07s")
+
+    def test_horas_e_minutos(self):
+        self.assertEqual(rs.fmt_duracao(4573), "1h16m")
+
+
 class TestBuscarEventos(unittest.TestCase):
 
     @patch("relatorios_service.call")

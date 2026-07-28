@@ -21,8 +21,21 @@ Host da aplicação Nutrane. Gera os alertas "Acesso Nutrane está fora do
 ar" e "Acesso remoto Siagri Nutrane indisponível" com frequência
 crescente (55x em 7 dias observados em 2026-07-27, tendência de piora).
 Também foi um dos hosts com a correção manual incompleta de exclusão do
-GoogleUpdater (ver `docs/adr/002-correcao-ruido-googleupdater.md`). Candidato a investigação de
-estabilidade da aplicação/rede.
+GoogleUpdater (ver `docs/adr/002-correcao-ruido-googleupdater.md`).
+
+**Investigação de "Acesso Nutrane está fora do ar" feita em 2026-07-28**
+(via `specs/historico_ocorrencias.md`, usando o histórico de
+início/resolução de cada ocorrência): 169 ocorrências em 30 dias, **100%
+já resolvidas sozinhas** (nenhuma ficou em aberto) — duração média de
+44s, mínima de 7s, máxima de ~1h16min (um único caso fora da curva). Ou
+seja, **não é uma indisponibilidade sustentada, é flapping** (a trigger
+cai e volta rapidamente, de forma repetida). Dias com pico bem acima da
+média: 30/06 (11x), 06/07 (23x), 18/07 (14x), 26/07 (25x) — vale
+verificar se coincidem com alguma rotina/job agendado no lado da
+aplicação Nutrane ou da rede até esse host; não investigado ainda.
+Continua sendo candidato de investigação de estabilidade da
+aplicação/rede, mas agora com hipótese mais específica (flapping
+intermitente, não queda prolongada).
 
 ### Siagri Rancho
 Também teve exclusão manual incompleta de GoogleUpdater. Aparece em

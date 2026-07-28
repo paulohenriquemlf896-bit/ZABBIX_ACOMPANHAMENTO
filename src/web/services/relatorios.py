@@ -17,7 +17,9 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-from relatorios_service import buscar_eventos, agregar, agregar_por_host, desde_periodo  # noqa: E402
+from relatorios_service import (  # noqa: E402
+    buscar_eventos, agregar, agregar_por_host, desde_periodo, historico,
+)
 from zbx_api import ZBX_TOKEN  # noqa: E402
 
 # =========================================================================
@@ -25,6 +27,7 @@ from zbx_api import ZBX_TOKEN  # noqa: E402
 # =========================================================================
 TTL_SEGUNDOS = 60  # cache por periodo (prompts/politicas/performance.txt, item 7)
 VISOES = ("problema", "host")
+CHAVE_MAX_CARACTERES = 500  # limita tamanho do parametro (prompts/politicas/seguranca.txt, item 9)
 # =========================================================================
 
 _cache = {}  # (periodo, visao) -> (timestamp_cache, resultado)
@@ -95,3 +98,25 @@ def dados_periodo(periodo: str, visao: str = "problema") -> dict:
     }
     _cache[chave] = (agora, resultado)
     return resultado
+
+
+def historico_grupo(periodo: str, visao: str, chave: str) -> list[dict]:
+    """Historico de ocorrencias (drill-down) de um grupo especifico do
+    ranking — ver specs/historico_ocorrencias.md.
+
+    Nao usa cache: e uma consulta sob demanda, nao a visao principal do
+    painel. Levanta ValueError para visao invalida ou chave vazia/grande
+    demais; RuntimeError em falha de comunicacao com o Zabbix.
+    """
+    if visao not in VISOES:
+        raise ValueError(f"visao invalida: {visao!r}")
+    if not chave or len(chave) > CHAVE_MAX_CARACTERES:
+        raise ValueError("chave invalida ou ausente")
+
+    desde = desde_periodo(periodo)
+    desde_ts = int(desde.timestamp())
+    eventos, erro = buscar_eventos(desde_ts, ZBX_TOKEN)
+    if erro:
+        raise RuntimeError(erro)
+
+    return historico(eventos, visao, chave, desde_ts, ZBX_TOKEN)

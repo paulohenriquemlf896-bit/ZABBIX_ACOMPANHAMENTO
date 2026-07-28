@@ -5,6 +5,53 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-07-28 (10) — Histórico de ocorrências (drill-down) no painel
+
+- **Motivado por uma investigação real do usuário**: ao ver a linha
+  "Acesso Nutrane está fora do ar — 47 ocorrências" no painel, o usuário
+  perguntou quando cada uma caiu e quando foi resolvida. Investigação ao
+  vivo contra a API do Zabbix revelou um achado real: **169 ocorrências
+  em 30 dias, 100% resolvidas sozinhas em segundos (média 44s, máxima
+  ~1h16min)** — não é indisponibilidade sustentada, é flapping. Achado
+  registrado em `contexto/servidores.md`.
+- **Descoberta de API registrada em `contexto/api.md`**: `event.get` não
+  devolve o horário de resolução direto (`r_clock` não é um campo de
+  `output` válido, dá erro `Invalid params`) — só o `r_eventid`, exigindo
+  uma segunda chamada `event.get` pelos `eventids` dos eventos de
+  recuperação para obter o `clock` de resolução.
+- **Funcionalidade nova**: spec escrita antes de implementar
+  ([`specs/historico_ocorrencias.md`](../specs/historico_ocorrencias.md)).
+  Cada linha do ranking (tabela e gráfico) agora é um link para
+  `GET /historico?periodo=...&visao=...&chave=...`: lista cada
+  ocorrência (quando caiu, quando voltou, duração), resumo (total,
+  quantas ainda abertas, duração média/mínima/máxima) e um mini-gráfico
+  de frequência por dia (achar dias de pico — exatamente o que motivou o
+  pedido). Endpoint JSON equivalente em `GET /api/relatorios/historico`.
+- **Camada de domínio** (`src/relatorios_service.py`): `eventos_do_grupo()`
+  filtra os eventos já buscados pela mesma chave de agrupamento do
+  ranking (nome do problema ou host — garante que o total do histórico
+  bate com o total da linha clicada); `buscar_resolucoes()` busca os
+  horários de resolução; `historico()` combina os dois;
+  `fmt_duracao()` formata segundos de forma humana (`44s`, `1h16m`).
+  `buscar_eventos()` passou a pedir também `r_eventid` no `output`.
+- **Camada de serviço web** (`src/web/services/relatorios.py`):
+  `historico_grupo()` — sem cache (é consulta sob demanda, não a visão
+  principal), valida `visao` e limita `chave` a 500 caracteres
+  (`prompts/politicas/seguranca.txt`, item 9).
+- **Rotas**: `/historico` (página) e `/api/relatorios/historico` (JSON),
+  ambas com log de falha/lentidão (`src/logging_util.py`), mesmo padrão
+  das rotas existentes.
+- **Template novo**: `src/web/templates/historico.html`, reaproveitando
+  os componentes e a paleta já estabelecidos (`_componentes.html`,
+  `.grafico-ranking` para o gráfico por dia).
+- 21 testes novos (domínio, serviço, rotas). Suite completa: **114
+  testes, 100% offline**. Validado manualmente contra o Zabbix real: o
+  histórico de "Acesso Nutrane está fora do ar" bateu exatamente com os
+  números apurados na investigação ao vivo que originou o pedido (169
+  ocorrências/30 dias, 47/7 dias, média 44s).
+- `docs/README.md`, `AI_MEMORY.md`, `contexto/api.md` e
+  `contexto/servidores.md` atualizados.
+
 ## 2026-07-28 (9) — Auditoria de conformidade contra prompts/ e correção de 3 gaps
 
 - **Pedido do usuário**: auditoria explícita do que já foi construído

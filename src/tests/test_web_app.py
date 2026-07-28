@@ -12,6 +12,7 @@ Uso:
 import os
 import sys
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web"))
@@ -129,6 +130,94 @@ class TestMontarGraficoRanking(unittest.TestCase):
         self.assertEqual(len(grafico), painel.TOP_N_GRAFICO)
 
 
+class TestPaginaHistorico(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+
+    def test_sem_chave_mostra_mensagem_amigavel(self):
+        resp = self.client.get("/historico?periodo=7d&visao=problema")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Nenhum problema/host valido selecionado".encode("utf-8"), resp.data)
+
+    @patch("app.historico_grupo")
+    def test_chave_valida_repassada_ao_servico(self, mock_hist):
+        mock_hist.return_value = []
+        resp = self.client.get("/historico?periodo=30d&visao=host&chave=SRV-FORTES")
+        self.assertEqual(resp.status_code, 200)
+        mock_hist.assert_called_once_with("30d", "host", "SRV-FORTES")
+
+    @patch("app.historico_grupo")
+    def test_ocorrencia_resolvida_mostra_duracao_formatada(self, mock_hist):
+        mock_hist.return_value = [
+            {"inicio": 1000, "fim": 1044, "duracao_segundos": 44, "severidade": 2},
+        ]
+        resp = self.client.get("/historico?chave=X")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"44s", resp.data)
+
+    @patch("app.historico_grupo")
+    def test_ocorrencia_aberta_mostra_ainda_aberta(self, mock_hist):
+        mock_hist.return_value = [
+            {"inicio": 1000, "fim": None, "duracao_segundos": None, "severidade": 2},
+        ]
+        resp = self.client.get("/historico?chave=X")
+        self.assertIn("ainda aberta".encode("utf-8"), resp.data)
+
+    @patch("app.historico_grupo")
+    def test_erro_de_comunicacao_mostra_mensagem_amigavel(self, mock_hist):
+        mock_hist.side_effect = RuntimeError("Conexao: timed out")
+        resp = self.client.get("/historico?chave=X")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Conexao: timed out", resp.data)
+
+    def test_chave_maior_que_limite_mostra_mensagem_amigavel(self):
+        resp = self.client.get("/historico?chave=" + "x" * 600)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Nenhum problema/host valido selecionado".encode("utf-8"), resp.data)
+
+
+class TestMontarGraficoDias(unittest.TestCase):
+
+    def test_lista_vazia_devolve_lista_vazia(self):
+        self.assertEqual(painel.montar_grafico_dias([]), [])
+
+    def test_agrupa_por_dia_em_ordem_cronologica(self):
+        # itens vem do mais recente para o mais antigo (como historico() devolve)
+        itens = [
+            {"inicio": datetime(2026, 7, 27, 10, 0).timestamp()},
+            {"inicio": datetime(2026, 7, 26, 10, 0).timestamp()},
+            {"inicio": datetime(2026, 7, 26, 11, 0).timestamp()},
+        ]
+        grafico = painel.montar_grafico_dias(itens)
+        dias = [g["dia"] for g in grafico]
+        self.assertEqual(dias, ["26/07", "27/07"])
+        self.assertEqual(grafico[0]["ocorrencias"], 2)
+        self.assertEqual(grafico[1]["ocorrencias"], 1)
+
+
+class TestResumoHistorico(unittest.TestCase):
+
+    def test_lista_vazia(self):
+        r = painel.resumo_historico([])
+        self.assertEqual(r["total"], 0)
+        self.assertIsNone(r["duracao_media"])
+
+    def test_mistura_resolvidas_e_abertas(self):
+        itens = [
+            {"duracao_segundos": 10},
+            {"duracao_segundos": 30},
+            {"duracao_segundos": None},
+        ]
+        r = painel.resumo_historico(itens)
+        self.assertEqual(r["total"], 3)
+        self.assertEqual(r["abertas"], 1)
+        self.assertEqual(r["resolvidas"], 2)
+        self.assertEqual(r["duracao_media"], "20s")
+        self.assertEqual(r["duracao_min"], "10s")
+        self.assertEqual(r["duracao_max"], "30s")
+
+
 class TestHealth(unittest.TestCase):
 
     def setUp(self):
@@ -195,6 +284,44 @@ class TestApiRelatoriosDados(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(body["ok"])
         self.assertEqual(body["erro"], "Conexao: timed out")
+
+
+class TestApiRelatoriosHistorico(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+
+    @patch("api.historico_grupo")
+    def test_chave_valida_devolve_envelope_ok(self, mock_hist):
+        mock_hist.return_value = [{"inicio": 1000, "fim": None, "duracao_segundos": None, "severidade": 2}]
+        resp = self.client.get("/api/relatorios/historico?periodo=7d&visao=problema&chave=X")
+        body = resp.get_json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(body["ok"])
+        self.assertEqual(len(body["dados"]["itens"]), 1)
+        mock_hist.assert_called_once_with("7d", "problema", "X")
+
+    def test_chave_ausente_devolve_400(self):
+        resp = self.client.get("/api/relatorios/historico?periodo=7d")
+        body = resp.get_json()
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(body["ok"])
+
+    def test_periodo_invalido_devolve_400(self):
+        resp = self.client.get("/api/relatorios/historico?periodo=nao_existe&chave=X")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_visao_invalida_devolve_400(self):
+        resp = self.client.get("/api/relatorios/historico?visao=departamento&chave=X")
+        self.assertEqual(resp.status_code, 400)
+
+    @patch("api.historico_grupo")
+    def test_erro_de_comunicacao_devolve_200_com_ok_false(self, mock_hist):
+        mock_hist.side_effect = RuntimeError("Conexao: timed out")
+        resp = self.client.get("/api/relatorios/historico?chave=X")
+        body = resp.get_json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(body["ok"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import badge_severidade %}
+
+{% block titulo %}Histórico — {{ chave }} — Acompanhamento Zabbix{% endblock %}
+{% block subtitulo %}{{ titulos_periodo[periodo_atual] }} &middot; {{ titulos_visao[visao_atual]|lower }}{% if auto_refresh_segundos %} &middot; atualiza automaticamente a cada {{ auto_refresh_segundos }}s{% endif %}{% endblock %}
+
+{% block conteudo %}
+<p>
+  <a href="{{ url_for('pagina_relatorios', periodo=periodo_atual, visao=visao_atual) }}">&larr; voltar ao ranking</a>
+</p>
+
+{% if erro %}
+  <section><p class="vazio">Não foi possível carregar o histórico: {{ erro }}</p></section>
+{% else %}
+<section>
+  <h2>{{ chave }}</h2>
+
+  {% if not itens %}
+    <p class="vazio">Nenhuma ocorrência encontrada neste período.</p>
+  {% else %}
+  <div class="sevrow">
+    <b>Total: {{ resumo.total }}</b> &nbsp;
+    {% if resumo.abertas > 0 %}<span class="pill" style="background:#E45959">Ainda aberta(s): {{ resumo.abertas }}</span>{% endif %}
+    {% if resumo.duracao_media %}
+      &nbsp; Duração média: <b>{{ resumo.duracao_media }}</b>
+      &middot; mínima: {{ resumo.duracao_min }}
+      &middot; máxima: {{ resumo.duracao_max }}
+    {% endif %}
+  </div>
+
+  {% if grafico_dias|length > 1 %}
+  <div class="grafico-ranking">
+    {% for d in grafico_dias %}
+    <div class="linha">
+      <div class="rotulo" title="{{ d.dia }}">{{ d.dia }}</div>
+      <div class="trilha"><div class="barra" style="width:{{ d.largura_pct|round(2) }}%;background:#2b6cb0"
+           title="{{ d.dia }}: {{ d.ocorrencias }} ocorrencias"></div></div>
+      <div class="valor">{{ d.ocorrencias }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="tabela-scroll">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Caiu</th><th>Voltou</th><th>Duração</th><th>Gravidade</th>
+    </tr></thead>
+    <tbody>
+      {% for it in itens %}
+      <tr>
+        <td class="rank">{{ loop.index }}</td>
+        <td class="data">{{ it.inicio_fmt }}</td>
+        <td class="data">{{ it.fim_fmt or "ainda aberta" }}</td>
+        <td class="num">{{ it.duracao_fmt or "-" }}</td>
+        <td>{{ badge_severidade(sev_nome[it.severidade], sev_cor[it.severidade]) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

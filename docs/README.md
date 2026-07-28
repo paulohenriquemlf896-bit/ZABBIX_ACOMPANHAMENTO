@@ -95,6 +95,12 @@ o Zabbix, consultas lentas > 5s — ver `src/logging_util.py` e
 `prompts/politicas/logs.txt`). Testes em `src/tests/test_web_app.py` e
 `src/tests/test_web_service_relatorios.py`.
 
+Cada linha do ranking é clicável e leva a `GET /historico?periodo=...&visao=...&chave=...`
+— histórico de ocorrências daquele problema/host: quando cada uma
+começou, quando terminou e quanto durou, com gráfico de frequência por
+dia (ver [`specs/historico_ocorrencias.md`](../specs/historico_ocorrencias.md)).
+Endpoint JSON equivalente: `GET /api/relatorios/historico?periodo=...&visao=...&chave=...`.
+
 ## Inventário de scripts (`/scripts`)
 
 Utilitários pontuais — relatórios, inspeção e correções de configuração.

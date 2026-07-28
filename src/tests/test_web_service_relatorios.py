@@ -100,5 +100,45 @@ class TestVisaoHost(unittest.TestCase):
         self.assertEqual(mock_buscar.call_count, 1)
 
 
+class TestHistoricoGrupo(unittest.TestCase):
+    """Ver specs/historico_ocorrencias.md."""
+
+    @patch("relatorios_service.call")
+    @patch("relatorios.buscar_eventos")
+    def test_ocorrencia_encontrada_e_devolvida(self, mock_buscar, mock_call):
+        mock_buscar.return_value = ([
+            {"clock": "9999999999", "name": "Problema X", "severity": 2, "hosts": [], "r_eventid": "0"},
+        ], None)
+        itens = web_relatorios.historico_grupo("7d", "problema", "Problema X")
+        self.assertEqual(len(itens), 1)
+        self.assertIsNone(itens[0]["fim"])
+
+    def test_visao_invalida_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            web_relatorios.historico_grupo("7d", "departamento", "X")
+
+    def test_chave_vazia_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            web_relatorios.historico_grupo("7d", "problema", "")
+
+    def test_chave_grande_demais_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            web_relatorios.historico_grupo("7d", "problema", "x" * 501)
+
+    @patch("relatorios.buscar_eventos")
+    def test_erro_de_comunicacao_levanta_runtimeerror(self, mock_buscar):
+        mock_buscar.return_value = ([], "Conexao: timed out")
+        with self.assertRaises(RuntimeError):
+            web_relatorios.historico_grupo("7d", "problema", "X")
+
+    @patch("relatorios_service.call")
+    @patch("relatorios.buscar_eventos")
+    def test_nao_usa_cache(self, mock_buscar, mock_call):
+        mock_buscar.return_value = ([], None)
+        web_relatorios.historico_grupo("7d", "problema", "X")
+        web_relatorios.historico_grupo("7d", "problema", "X")
+        self.assertEqual(mock_buscar.call_count, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -84,7 +84,7 @@ def buscar_eventos(desde_ts, token, limite=None):
     Zabbix, para manter a mensagem historica dos scripts).
     """
     r = call("event.get", {
-        "output": ["eventid", "clock", "name", "severity"],
+        "output": ["eventid", "clock", "name", "severity", "r_eventid"],
         "source": 0,          # triggers
         "object": 0,          # trigger
         "value": 1,           # 1 = PROBLEM (ignora as recuperacoes/OK)
@@ -169,6 +169,84 @@ def agregar_por_host(eventos: list[dict], desde_ts: int) -> tuple[list[dict], in
     return ranking, total, por_sev
 
 
+def eventos_do_grupo(eventos: list[dict], visao: str, chave: str, desde_ts: int) -> list[dict]:
+    """Filtra os eventos ja buscados para os que pertencem a um grupo
+    especifico do ranking — mesma chave de agrupamento que agregar()
+    (visao "problema", chave = nome) ou agregar_por_host() (visao
+    "host", chave = host) usam, para o total do historico bater com o
+    total mostrado na linha do ranking (ver specs/historico_ocorrencias.md).
+
+    Nao busca nada novo na API — so filtra a lista ja fornecida.
+    Devolve ordenado do mais recente para o mais antigo.
+    """
+    resultado = []
+    for ev in eventos:
+        clock = int(ev["clock"])
+        if clock < desde_ts:
+            continue
+        if visao == "host":
+            pertence = chave in {h.get("name", "?") for h in ev.get("hosts", [])}
+        else:
+            pertence = (ev.get("name") or "(sem nome)") == chave
+        if pertence:
+            resultado.append(ev)
+    resultado.sort(key=lambda e: int(e["clock"]), reverse=True)
+    return resultado
+
+
+def buscar_resolucoes(r_eventids: list[str], token: str) -> dict[str, int]:
+    """Busca o horario (clock) de cada evento de recuperacao (OK) dado o
+    seu eventid (campo "r_eventid" do evento de problema original).
+
+    A API do Zabbix nao devolve o horario de resolucao direto no
+    event.get do evento de problema (so o eventid da recuperacao, em
+    "r_eventid") — por isso uma segunda chamada busca esses eventos de
+    recuperacao pelo proprio eventid (ver contexto/api.md). Nunca
+    levanta excecao: falha na chamada devolve dict vazio, e o chamador
+    mostra as ocorrencias sem duracao em vez de falhar a pagina inteira
+    (ver specs/historico_ocorrencias.md, casos extremos).
+    """
+    ids = sorted({r for r in r_eventids if r and r != "0"})
+    if not ids:
+        return {}
+    r = call("event.get", {"output": ["eventid", "clock"], "eventids": ids}, token=token)
+    if "error" in r or "__error__" in r:
+        return {}
+    return {e["eventid"]: int(e["clock"]) for e in r.get("result", [])}
+
+
+def historico(eventos: list[dict], visao: str, chave: str, desde_ts: int, token: str) -> list[dict]:
+    """Monta o historico de ocorrencias de um grupo (ver specs/historico_ocorrencias.md):
+    cada item tem "inicio" (clock), "fim" (clock da resolucao, ou None
+    se ainda aberta), "duracao_segundos" (ou None) e "severidade".
+    """
+    grupo = eventos_do_grupo(eventos, visao, chave, desde_ts)
+    resolucoes = buscar_resolucoes([ev.get("r_eventid", "0") for ev in grupo], token)
+    itens = []
+    for ev in grupo:
+        inicio = int(ev["clock"])
+        reid = ev.get("r_eventid", "0")
+        fim = resolucoes.get(reid) if reid and reid != "0" else None
+        itens.append({
+            "inicio": inicio,
+            "fim": fim,
+            "duracao_segundos": (fim - inicio) if fim is not None else None,
+            "severidade": int(ev.get("severity", 0)),
+        })
+    return itens
+
+
 def fmt_ts(ts):
     """Formata timestamp unix para dd/mm/aaaa hh:mm (padroes/convencoes.md)."""
     return datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M")
+
+
+def fmt_duracao(segundos: int) -> str:
+    """Formata uma duracao em segundos de forma humana (ex.: 44s, 5m07s, 1h16m)."""
+    if segundos < 60:
+        return f"{segundos}s"
+    minutos, seg = divmod(segundos, 60)
+    if minutos < 60:
+        return f"{minutos}m{seg:02d}s"
+    horas, minutos = divmod(minutos, 60)
+    return f"{horas}h{minutos:02d}m"
