@@ -5,9 +5,11 @@ Painel web (Flask) — visao de problemas recorrentes do Zabbix.
 
 Consolida o que hoje e gerado como HTML estatico por
 scripts/relatorio_problemas.py em uma tela navegavel, sempre atualizada
-(cache de 60s — ver src/web/services/relatorios.py). Escopo inicial: uma
-unica visao, sem autenticacao (ver specs/dashboard.md e
-docs/adr/005-painel-web-flask.md).
+(cache de 60s — ver src/web/services/relatorios.py). A pagina se
+autoatualiza no mesmo intervalo do cache (meta refresh — ver
+prompts/tarefas/frontend.txt, item 18, "painel de TV"), preservando o
+periodo selecionado na querystring. Escopo inicial: uma unica visao, sem
+autenticacao (ver specs/dashboard.md e docs/adr/005-painel-web-flask.md).
 
 Uso:
   python src/web/app.py
@@ -35,7 +37,7 @@ from flask import Flask, render_template, request  # noqa: E402
 
 from api import bp_api  # noqa: E402
 from relatorios_service import PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts  # noqa: E402
-from services.relatorios import dados_periodo  # noqa: E402
+from services.relatorios import dados_periodo, TTL_SEGUNDOS  # noqa: E402
 from zbx_api import call  # noqa: E402
 
 # =========================================================================
@@ -67,6 +69,7 @@ def pagina_relatorios():
         "top_n": TOP_N,
         "versao_api": v.get("result", "?"),
         "gerado": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "auto_refresh_segundos": TTL_SEGUNDOS,
         "dados": None,
         "erro": None,
     }

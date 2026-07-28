@@ -48,7 +48,16 @@ anteriores (o histórico de mudança de estado vive no
   manualmente contra o Zabbix real em 2026-07-28 (todas as 4 janelas,
   `/health`, whitelist de período). Testes em
   `src/tests/test_web_app.py` e `src/tests/test_web_service_relatorios.py`
-  (14 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.
+  (16 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.
+- **Auto-atualização do painel** — a página se atualiza sozinha a cada
+  60s (`<meta http-equiv="refresh">`, mesmo intervalo do cache),
+  preservando o período selecionado na querystring; indicador visível
+  "atualiza automaticamente a cada 60s" no cabeçalho. Padrão de "painel
+  de TV" já previsto em `prompts/tarefas/frontend.txt`, item 18 — sem
+  dependência nova, sem processo em segundo plano. Real-time via
+  WebSocket foi avaliado e descartado por ora: exigiria dependência nova
+  e processo extra sem ganho real, já que o cache é de 60s (ver decisão
+  registrada no CHANGELOG de 2026-07-28).
 
 ## Funcionalidades em andamento
 

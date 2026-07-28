@@ -2,7 +2,7 @@
 {% from "_componentes.html" import badge_severidade, pill_severidade %}
 
 {% block titulo %}Problemas recorrentes — Acompanhamento Zabbix{% endblock %}
-{% block subtitulo %}Zabbix {{ versao_api }} &middot; gerado em {{ gerado }}{% endblock %}
+{% block subtitulo %}Zabbix {{ versao_api }} &middot; atualizado em {{ gerado }}{% if auto_refresh_segundos %} &middot; atualiza automaticamente a cada {{ auto_refresh_segundos }}s{% endif %}{% endblock %}
 
 {% block conteudo %}
 <nav class="periodos">

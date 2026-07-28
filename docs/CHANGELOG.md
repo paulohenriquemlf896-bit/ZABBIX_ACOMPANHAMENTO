@@ -5,6 +5,34 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-07-28 (6) — Auto-atualização do painel ("dashboard em tempo real")
+
+- **Pedido do usuário**: dashboard em tempo real. Avaliadas duas
+  abordagens — WebSocket (push instantâneo, exigiria dependência nova
+  como `flask-socketio` e um processo extra verificando o Zabbix
+  continuamente) vs. auto-atualização periódica (meta refresh, já
+  prevista em `prompts/tarefas/frontend.txt`, item 18, para "painel de
+  TV"). Escolhida a segunda: sem dependência nova, sem processo extra, e
+  sem perda real de atualidade — o cache do painel já é de 60s, então
+  nada mais rápido que isso apareceria de qualquer forma.
+- `src/web/app.py`: contexto do template passa a incluir
+  `auto_refresh_segundos` (reaproveita `TTL_SEGUNDOS` de
+  `src/web/services/relatorios.py` — um único número controla cache e
+  intervalo de atualização, não dois valores que poderiam divergir).
+- `src/web/templates/base.html`: `<meta http-equiv="refresh">`
+  condicional (só quando o valor é passado, evitando refresh acidental
+  em `content=""` caso algum template futuro use `base.html` sem
+  fornecer o contexto).
+- `src/web/templates/index.html`: indicador visível "atualiza
+  automaticamente a cada 60s" ao lado do horário de atualização — nunca
+  refresh silencioso sem o usuário saber por que a tela mudou.
+- O período selecionado (`?periodo=...`) é preservado no refresh (meta
+  refresh sem URL recarrega a própria URL atual).
+- 2 testes novos em `src/tests/test_web_app.py` (tag presente na página
+  normal e também na página de erro, para que o painel se recupere
+  sozinho quando o Zabbix voltar). Suite completa: 58 testes.
+- Validado manualmente contra o Zabbix real.
+
 ## 2026-07-28 (5) — Fechamento da dívida técnica de cobertura de teste
 
 - **`src/tests/test_relatorio_problemas_apresentacao.py` criado** (10

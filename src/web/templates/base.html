@@ -5,6 +5,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{% if auto_refresh_segundos %}
+<meta http-equiv="refresh" content="{{ auto_refresh_segundos }}">
+{% endif %}
 <title>{% block titulo %}Acompanhamento Zabbix{% endblock %}</title>
 <style>
   *{box-sizing:border-box}

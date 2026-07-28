@@ -59,6 +59,26 @@ class TestPaginaRelatorios(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Conexao: timed out", resp.data)
 
+    @patch("app.dados_periodo")
+    @patch("app.call")
+    def test_pagina_tem_meta_refresh_no_intervalo_do_cache(self, mock_call, mock_dados):
+        mock_call.return_value = {"result": "7.4.4"}
+        mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
+        resp = self.client.get("/")
+        esperado = f'<meta http-equiv="refresh" content="{painel.TTL_SEGUNDOS}">'.encode("utf-8")
+        self.assertIn(esperado, resp.data)
+
+    @patch("app.dados_periodo")
+    @patch("app.call")
+    def test_pagina_de_erro_tambem_tem_meta_refresh(self, mock_call, mock_dados):
+        # mesmo em falha de comunicacao, a pagina deve se recuperar sozinha
+        # quando o Zabbix voltar, sem exigir F5 manual.
+        mock_call.return_value = {"result": "7.4.4"}
+        mock_dados.side_effect = RuntimeError("Conexao: timed out")
+        resp = self.client.get("/")
+        esperado = f'<meta http-equiv="refresh" content="{painel.TTL_SEGUNDOS}">'.encode("utf-8")
+        self.assertIn(esperado, resp.data)
+
 
 class TestHealth(unittest.TestCase):
 
