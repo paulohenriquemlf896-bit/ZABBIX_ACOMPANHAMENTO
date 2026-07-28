@@ -13,7 +13,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from services.relatorios import dados_periodo  # noqa: E402
+from services.relatorios import dados_periodo, VISOES  # noqa: E402
 
 from flask import Blueprint, jsonify, request
 
@@ -24,16 +24,23 @@ bp_api = Blueprint("api", __name__, url_prefix="/api")
 
 @bp_api.route("/relatorios/dados", methods=["GET"])
 def relatorios_dados():
-    """Dados agregados de um periodo (para uso futuro de atualizacao via
-    JS, ou consumo programatico). A pagina principal ja renderiza os
-    mesmos dados no servidor — ver src/web/app.py."""
+    """Dados agregados de um periodo/visao (para uso futuro de
+    atualizacao via JS, ou consumo programatico). A pagina principal ja
+    renderiza os mesmos dados no servidor — ver src/web/app.py.
+    `visao=problema` (default) ou `visao=host` — ver
+    specs/ranking_por_host.md."""
     periodo = request.args.get("periodo", "7d")
     if periodo not in PERIODOS_VALIDOS:
         return jsonify({"ok": False, "dados": None,
                          "erro": "Parametro 'periodo' invalido."}), 400
 
+    visao = request.args.get("visao", "problema")
+    if visao not in VISOES:
+        return jsonify({"ok": False, "dados": None,
+                         "erro": "Parametro 'visao' invalido."}), 400
+
     try:
-        dados = dados_periodo(periodo)
+        dados = dados_periodo(periodo, visao)
         return jsonify({"ok": True, "dados": dados, "erro": None})
     except RuntimeError as e:
         # Falha esperada de comunicacao com o Zabbix: 200 com ok=false

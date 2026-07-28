@@ -81,6 +81,74 @@ class TestAgregar(unittest.TestCase):
         self.assertEqual(ranking[0]["hosts"], {"Host A", "Host B"})
 
 
+class TestAgregarPorHost(unittest.TestCase):
+    """Ver specs/ranking_por_host.md para as regras de negocio."""
+
+    def test_lista_vazia_retorna_ranking_vazio(self):
+        ranking, total, por_sev = rs.agregar_por_host([], desde_ts=0)
+        self.assertEqual(ranking, [])
+        self.assertEqual(total, 0)
+        self.assertTrue(all(n == 0 for n in por_sev.values()))
+
+    def test_evento_sem_host_nao_entra_no_ranking_mas_conta_no_total(self):
+        eventos = [{"clock": 100, "name": "X", "severity": 2, "hosts": []}]
+        ranking, total, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(ranking, [])
+        self.assertEqual(total, 1)
+
+    def test_evento_com_host_unico_conta_uma_vez(self):
+        eventos = [{"clock": 100, "name": "X", "severity": 2, "hosts": [{"name": "Host A"}]}]
+        ranking, total, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(total, 1)
+        self.assertEqual(ranking[0]["host"], "Host A")
+        self.assertEqual(ranking[0]["count"], 1)
+
+    def test_evento_com_multiplos_hosts_conta_para_cada_host(self):
+        eventos = [{"clock": 100, "name": "X", "severity": 2,
+                    "hosts": [{"name": "Host A"}, {"name": "Host B"}]}]
+        ranking, total, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(total, 1)
+        hosts = {g["host"]: g["count"] for g in ranking}
+        self.assertEqual(hosts, {"Host A": 1, "Host B": 1})
+
+    def test_evento_fora_da_janela_e_ignorado(self):
+        eventos = [
+            {"clock": 50, "name": "Antigo", "severity": 2, "hosts": [{"name": "Host A"}]},
+            {"clock": 150, "name": "Recente", "severity": 2, "hosts": [{"name": "Host A"}]},
+        ]
+        ranking, total, _ = rs.agregar_por_host(eventos, desde_ts=100)
+        self.assertEqual(total, 1)
+        self.assertEqual(ranking[0]["count"], 1)
+
+    def test_empate_de_contagem_mantem_ambos_hosts(self):
+        eventos = [
+            {"clock": 100, "name": "A", "severity": 1, "hosts": [{"name": "Host A"}]},
+            {"clock": 101, "name": "B", "severity": 1, "hosts": [{"name": "Host B"}]},
+        ]
+        ranking, total, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(total, 2)
+        hosts = {g["host"] for g in ranking}
+        self.assertEqual(hosts, {"Host A", "Host B"})
+
+    def test_severidade_agregada_e_a_maxima_do_host(self):
+        eventos = [
+            {"clock": 100, "name": "X", "severity": 2, "hosts": [{"name": "Host A"}]},
+            {"clock": 101, "name": "Y", "severity": 4, "hosts": [{"name": "Host A"}]},
+        ]
+        ranking, _, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(ranking[0]["sev"], 4)
+
+    def test_problemas_distintos_do_host_sao_unificados(self):
+        eventos = [
+            {"clock": 100, "name": "Problema A", "severity": 1, "hosts": [{"name": "Host A"}]},
+            {"clock": 101, "name": "Problema B", "severity": 1, "hosts": [{"name": "Host A"}]},
+            {"clock": 102, "name": "Problema A", "severity": 1, "hosts": [{"name": "Host A"}]},
+        ]
+        ranking, _, _ = rs.agregar_por_host(eventos, desde_ts=0)
+        self.assertEqual(ranking[0]["count"], 3)
+        self.assertEqual(ranking[0]["problemas"], {"Problema A", "Problema B"})
+
+
 class TestBuscarEventos(unittest.TestCase):
 
     @patch("relatorios_service.call")

@@ -68,10 +68,14 @@ cliente, a camada de domínio compartilhada, e o painel web) — ver
 ## Painel web (`/src/web`)
 
 Painel Flask que consolida a visão de problemas recorrentes numa tela
-navegável, com seletor de período via querystring (`?periodo=hoje|7d|30d|365d`)
-e cache de 60s. Escopo inicial (sem autenticação, sem escrita no Zabbix)
-definido em [`specs/dashboard.md`](../specs/dashboard.md); decisão
-arquitetural em
+navegável, com seletor de período (`?periodo=hoje|7d|30d|365d`) e de
+visão (`?visao=problema|host` — ranking por nome do problema ou por host
+afetado, ver [`specs/ranking_por_host.md`](../specs/ranking_por_host.md)),
+cache de 60s, e auto-atualização periódica (meta refresh, mesmo
+intervalo do cache). Cada visão tem um gráfico de barras (ranking) e uma
+barra de mix de severidade, além da tabela detalhada. Escopo inicial
+(sem autenticação, sem escrita no Zabbix) definido em
+[`specs/dashboard.md`](../specs/dashboard.md); decisão arquitetural em
 [`docs/adr/005-painel-web-flask.md`](adr/005-painel-web-flask.md).
 
 ```bash

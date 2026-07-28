@@ -7,18 +7,42 @@
 {% block conteudo %}
 <nav class="periodos">
   {% for p in periodos %}
-    <a href="{{ url_for('pagina_relatorios', periodo=p) }}"
+    <a href="{{ url_for('pagina_relatorios', periodo=p, visao=visao_atual) }}"
        class="{{ 'ativo' if p == periodo_atual else '' }}">{{ titulos_periodo[p] }}</a>
+  {% endfor %}
+</nav>
+<nav class="visoes">
+  {% for v in visoes %}
+    <a href="{{ url_for('pagina_relatorios', periodo=periodo_atual, visao=v) }}"
+       class="{{ 'ativo' if v == visao_atual else '' }}">{{ titulos_visao[v] }}</a>
   {% endfor %}
 </nav>
 
 {% if erro %}
   <section><p class="vazio">Nao foi possivel carregar os dados: {{ erro }}</p></section>
 {% else %}
+{% set rotulo_coluna = "Host" if visao_atual == "host" else "Problema" %}
+{% set detalhe_coluna = "Problemas distintos" if visao_atual == "host" else "Hosts afetados" %}
 <section>
-  <h2>{{ titulos_periodo[periodo_atual] }}</h2>
+  <h2>{{ titulos_periodo[periodo_atual] }} <small>({{ titulos_visao[visao_atual]|lower }})</small></h2>
+
+  {# Mix de severidade: part-to-whole numa unica barra proporcional,
+     complementando as pills (que trazem o numero exato de cada uma). #}
+  {% if dados.total %}
+  <div class="mix-severidade">
+    {% for sev in [5, 4, 3, 2, 1, 0] %}
+      {% set n = dados.por_severidade.get(sev, 0) %}
+      {% if n > 0 %}
+      <div class="segmento" style="width:{{ (n / dados.total * 100)|round(2) }}%;background:{{ sev_cor[sev] }}"
+           title="{{ sev_nome[sev] }}: {{ n }} ({{ '%.1f'|format(n / dados.total * 100) }}%)"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="sevrow"><b>Total: {{ dados.total }}</b> &nbsp;
-    {% for sev, n in dados.por_severidade.items() %}
+    {% for sev in [5, 4, 3, 2, 1, 0] %}
+      {% set n = dados.por_severidade.get(sev, 0) %}
       {% if n > 0 %}{{ pill_severidade(sev_nome[sev], sev_cor[sev], n) }}{% endif %}
     {% endfor %}
   </div>
@@ -26,21 +50,38 @@
   {% if not dados.ranking %}
     <p class="vazio">Nenhum problema registrado neste periodo.</p>
   {% else %}
+
+  {# Grafico de barras do ranking (top {{ top_n_grafico }}): comprimento =
+     ocorrencias relativas ao maior item exibido, cor = severidade da
+     linha (mesma paleta oficial do Zabbix usada nas badges/pills). #}
+  <div class="grafico-ranking">
+    {% for item in grafico_ranking %}
+    <div class="linha">
+      <div class="rotulo" title="{{ item.rotulo }}">{{ item.rotulo }}</div>
+      <div class="trilha"><div class="barra" style="width:{{ item.largura_pct|round(2) }}%;background:{{ sev_cor[item.severidade] }}"
+           title="{{ item.rotulo }}: {{ item.ocorrencias }} ocorrencias"></div></div>
+      <div class="valor">{{ item.ocorrencias }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
   <div class="tabela-scroll">
   <table>
     <thead><tr>
-      <th>#</th><th>Problema</th><th>Ocorr.</th><th>%</th>
-      <th>Gravidade</th><th>Hosts afetados</th><th>Ultima vez</th>
+      <th>#</th><th>{{ rotulo_coluna }}</th><th>Ocorr.</th><th>%</th>
+      <th>Gravidade</th><th>{{ detalhe_coluna }}</th><th>Ultima vez</th>
     </tr></thead>
     <tbody>
       {% for g in dados.ranking[:top_n] %}
+      {% set item_nome = g.host if visao_atual == "host" else g.nome %}
+      {% set item_detalhe = g.problemas if visao_atual == "host" else g.hosts %}
       <tr>
         <td class="rank">{{ loop.index }}</td>
-        <td class="nome">{{ g.nome }}</td>
+        <td class="nome">{{ item_nome }}</td>
         <td class="num">{{ g.ocorrencias }}</td>
         <td class="num">{{ "%.1f"|format(g.ocorrencias / dados.total * 100 if dados.total else 0) }}%</td>
         <td>{{ badge_severidade(sev_nome[g.severidade], sev_cor[g.severidade]) }}</td>
-        <td class="hosts">{{ g.hosts|join(", ") }}</td>
+        <td class="hosts">{{ item_detalhe|join(", ") }}</td>
         <td class="data">{{ g.ultima_vez_fmt }}</td>
       </tr>
       {% endfor %}

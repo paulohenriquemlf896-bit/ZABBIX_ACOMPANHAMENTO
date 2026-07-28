@@ -133,6 +133,42 @@ def agregar(eventos, desde_ts):
     return ranking, total, por_sev
 
 
+def agregar_por_host(eventos, desde_ts):
+    """Agrupa por host afetado, contando ocorrencias no periodo (>= desde_ts).
+
+    Ver specs/ranking_por_host.md para as regras de negocio completas.
+    Resumo: evento com multiplos hosts conta para cada host envolvido;
+    evento sem host associado nao entra no ranking (mas ainda soma no
+    `total` devolvido, igual a agregar()). Devolve (ranking, total,
+    por_sev) — mesmo shape de agregar(), trocando "nome"/"hosts" por
+    "host"/"problemas".
+    """
+    grupos = {}
+    total = 0
+    por_sev = {s: 0 for s in SEV_NOME}
+    for ev in eventos:
+        clock = int(ev["clock"])
+        if clock < desde_ts:
+            continue
+        total += 1
+        sev = int(ev.get("severity", 0))
+        por_sev[sev] = por_sev.get(sev, 0) + 1
+        nome_problema = ev.get("name") or "(sem nome)"
+        for h in ev.get("hosts", []):
+            host = h.get("name", "?")
+            g = grupos.get(host)
+            if g is None:
+                g = grupos[host] = {"host": host, "count": 0, "sev": sev,
+                                     "problemas": set(), "primeiro": clock, "ultimo": clock}
+            g["count"] += 1
+            g["sev"] = max(g["sev"], sev)
+            g["problemas"].add(nome_problema)
+            g["primeiro"] = min(g["primeiro"], clock)
+            g["ultimo"] = max(g["ultimo"], clock)
+    ranking = sorted(grupos.values(), key=lambda x: x["count"], reverse=True)
+    return ranking, total, por_sev
+
+
 def fmt_ts(ts):
     """Formata timestamp unix para dd/mm/aaaa hh:mm (padroes/convencoes.md)."""
     return datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M")

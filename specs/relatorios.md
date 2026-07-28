@@ -75,6 +75,9 @@ Ver `contexto/regras_negocio.md` para as definições formais
 
 ## Extensões futuras (não implementadas — candidatas de roadmap)
 
-- Ranking por host em vez de por nome de problema (spec própria a
-  escrever quando priorizado).
 - Envio automático por e-mail (ver `specs/notificacoes.md`).
+
+## Extensões já implementadas em outra spec
+
+- Ranking por host em vez de por nome de problema — ver
+  `specs/ranking_por_host.md` (implementado no painel web).

@@ -5,6 +5,67 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-07-28 (7) — Repositório git inicializado e publicado
+
+- `git init`, `.claude/` (config local da ferramenta de IA) adicionado
+  ao `.gitignore` — decisão do usuário, não é parte do projeto Zabbix.
+  Nenhuma credencial no primeiro commit (confirmado: o token real só
+  existe em `.env`, fora do git).
+- Remoto adicionado e publicado em
+  `https://github.com/paulohenriquemlf896-bit/ZABBIX_ACOMPANHAMENTO`.
+- Resolve o risco "sem repositório git inicializado" registrado em
+  `AI_MEMORY.md`.
+
+## 2026-07-28 (8) — Ranking por host + gráficos no painel
+
+- **Pedido do usuário**: ranking de problemas por host e "um dashboard
+  com gráficos". Spec escrita antes de implementar:
+  [`specs/ranking_por_host.md`](../specs/ranking_por_host.md).
+- **`agregar_por_host()` criada** em `src/relatorios_service.py`,
+  espelhando `agregar()` com a chave de agrupamento trocada. Regra de
+  negócio nova e não óbvia, registrada na spec: evento com múltiplos
+  hosts conta para cada host envolvido; evento sem host é excluído do
+  ranking mas continua contando no total geral. 8 testes novos.
+- **`dados_periodo()`** (painel) ganhou o parâmetro `visao`
+  (`problema`/`host`), cache agora chaveado por `(periodo, visao)`. 4
+  testes novos.
+- **Rotas** (`/` e `/api/relatorios/dados`) ganharam `visao` na
+  querystring, validada contra whitelist (nunca 500 em valor inválido,
+  mesma regra de `periodo`). 6 testes novos.
+- **Gráficos**: antes de desenhar, consultada a skill de visualização de
+  dados do projeto (forma → cor → validação → marcas → interação →
+  acessibilidade). Decisões tomadas:
+  - Forma: ranking/magnitude → barra horizontal (rótulos longos não
+    cabem em coluna vertical). Part-to-whole da severidade → barra
+    única proporcional (≤6 segmentos, dentro do limite recomendado).
+  - Cor: a paleta de severidade já fixada pelo projeto
+    (`padroes/convencoes.md`) é tratada como o "status palette" da
+    skill — cor da barra = severidade da linha (um status real, não
+    identity nem magnitude), comprimento da barra = ocorrências
+    (magnitude). Dois canais distintos, não sobrepostos. A paleta NÃO
+    foi rodada pelo validador da skill: são as cores oficiais do
+    Zabbix, já mandatórias pelo projeto antes desta tarefa
+    (`prompts/tarefas/frontend.txt`, item 5) — fora de discricionariedade
+    desta implementação.
+  - Marcas: barra ≤24px (16px usada), ponta arredondada só do lado do
+    dado (`border-radius: 0 4px 4px 0`), base quadrada; gap de 2px cor
+    de superfície entre segmentos do mix de severidade; valor sempre na
+    ponta da barra (nunca dentro, nunca cortado); rótulo truncado com
+    reticências + `title` (nunca clipado sem indicação).
+    Comprimento relativo ao MAIOR item exibido (não ao total do
+    período), para o gráfico usar a largura disponível.
+  - Interação: `title` nativo (tooltip sem JS) em cada barra/segmento —
+    reforça, nunca substitui, já que todo valor também está na tabela
+    detalhada logo abaixo (o "table view" exigido pela skill já existia).
+  - Sem dependência nova: tudo é HTML/CSS/Jinja server-side, mesma
+    filosofia do resto do painel.
+  - `montar_grafico_ranking()` criada em `src/web/app.py` (camada de
+    apresentação). 5 testes novos.
+- Suite completa: **79 testes**, 100% offline. Validado manualmente
+  contra o Zabbix real nas duas visões e nas 4 janelas de tempo.
+- `docs/README.md` e `AI_MEMORY.md` atualizados; item "ranking por host"
+  removido do roadmap (implementado).
+
 ## 2026-07-28 (6) — Auto-atualização do painel ("dashboard em tempo real")
 
 - **Pedido do usuário**: dashboard em tempo real. Avaliadas duas

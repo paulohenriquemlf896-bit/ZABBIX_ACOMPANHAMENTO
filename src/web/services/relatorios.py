@@ -17,29 +17,38 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-from relatorios_service import buscar_eventos, agregar, desde_periodo  # noqa: E402
+from relatorios_service import buscar_eventos, agregar, agregar_por_host, desde_periodo  # noqa: E402
 from zbx_api import ZBX_TOKEN  # noqa: E402
 
 # =========================================================================
 # CONFIGURACAO
 # =========================================================================
 TTL_SEGUNDOS = 60  # cache por periodo (prompts/politicas/performance.txt, item 7)
+VISOES = ("problema", "host")
 # =========================================================================
 
-_cache = {}  # periodo -> (timestamp_cache, resultado)
+_cache = {}  # (periodo, visao) -> (timestamp_cache, resultado)
 
 
-def dados_periodo(periodo):
-    """Devolve os dados agregados de um periodo valido, usando cache de 60s.
+def dados_periodo(periodo, visao="problema"):
+    """Devolve os dados agregados de um periodo/visao validos, usando
+    cache de 60s (ver specs/ranking_por_host.md para a visao "host").
 
     Devolve um dict serializavel (ranking, total, por_severidade) em
-    sucesso. Levanta RuntimeError com mensagem amigavel em falha de
-    comunicacao com o Zabbix — nunca cacheia falha, para nao esconder uma
-    indisponibilidade temporaria por 60s (prompts/politicas/performance.txt,
-    item 7).
+    sucesso. Item do ranking tem "nome"/"hosts" na visao "problema" ou
+    "host"/"problemas" na visao "host" (ver
+    src/relatorios_service.py: agregar() vs agregar_por_host()).
+    Levanta RuntimeError com mensagem amigavel em falha de comunicacao
+    com o Zabbix, ou ValueError se `visao` nao estiver em VISOES — nunca
+    cacheia falha, para nao esconder uma indisponibilidade temporaria por
+    60s (prompts/politicas/performance.txt, item 7).
     """
+    if visao not in VISOES:
+        raise ValueError(f"visao invalida: {visao!r}")
+
+    chave = (periodo, visao)
     agora = time.time()
-    cacheado = _cache.get(periodo)
+    cacheado = _cache.get(chave)
     if cacheado and (agora - cacheado[0]) < TTL_SEGUNDOS:
         return cacheado[1]
 
@@ -49,13 +58,22 @@ def dados_periodo(periodo):
     if erro:
         raise RuntimeError(erro)
 
-    ranking, total, por_sev = agregar(eventos, desde_ts)
-    resultado = {
-        "periodo": periodo,
-        "desde": desde.isoformat(),
-        "total": total,
-        "por_severidade": por_sev,
-        "ranking": [
+    if visao == "host":
+        ranking_bruto, total, por_sev = agregar_por_host(eventos, desde_ts)
+        ranking = [
+            {
+                "host": g["host"],
+                "ocorrencias": g["count"],
+                "severidade": g["sev"],
+                "problemas": sorted(g["problemas"]),
+                "primeira_vez": g["primeiro"],
+                "ultima_vez": g["ultimo"],
+            }
+            for g in ranking_bruto
+        ]
+    else:
+        ranking_bruto, total, por_sev = agregar(eventos, desde_ts)
+        ranking = [
             {
                 "nome": g["nome"],
                 "ocorrencias": g["count"],
@@ -64,8 +82,16 @@ def dados_periodo(periodo):
                 "primeira_vez": g["primeiro"],
                 "ultima_vez": g["ultimo"],
             }
-            for g in ranking
-        ],
+            for g in ranking_bruto
+        ]
+
+    resultado = {
+        "periodo": periodo,
+        "visao": visao,
+        "desde": desde.isoformat(),
+        "total": total,
+        "por_severidade": por_sev,
+        "ranking": ranking,
     }
-    _cache[periodo] = (agora, resultado)
+    _cache[chave] = (agora, resultado)
     return resultado

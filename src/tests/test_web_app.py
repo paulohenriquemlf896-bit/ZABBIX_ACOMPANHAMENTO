@@ -25,12 +25,12 @@ class TestPaginaRelatorios(unittest.TestCase):
 
     @patch("app.dados_periodo")
     @patch("app.call")
-    def test_pagina_inicial_usa_periodo_default_7d(self, mock_call, mock_dados):
+    def test_pagina_inicial_usa_periodo_e_visao_default(self, mock_call, mock_dados):
         mock_call.return_value = {"result": "7.4.4"}
         mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
-        mock_dados.assert_called_once_with("7d")
+        mock_dados.assert_called_once_with("7d", "problema")
 
     @patch("app.dados_periodo")
     @patch("app.call")
@@ -39,7 +39,7 @@ class TestPaginaRelatorios(unittest.TestCase):
         mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
         resp = self.client.get("/?periodo=nao_existe")
         self.assertEqual(resp.status_code, 200)
-        mock_dados.assert_called_once_with("7d")
+        mock_dados.assert_called_once_with("7d", "problema")
 
     @patch("app.dados_periodo")
     @patch("app.call")
@@ -48,7 +48,25 @@ class TestPaginaRelatorios(unittest.TestCase):
         mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
         resp = self.client.get("/?periodo=365d")
         self.assertEqual(resp.status_code, 200)
-        mock_dados.assert_called_once_with("365d")
+        mock_dados.assert_called_once_with("365d", "problema")
+
+    @patch("app.dados_periodo")
+    @patch("app.call")
+    def test_visao_host_e_repassada_ao_servico(self, mock_call, mock_dados):
+        mock_call.return_value = {"result": "7.4.4"}
+        mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
+        resp = self.client.get("/?visao=host")
+        self.assertEqual(resp.status_code, 200)
+        mock_dados.assert_called_once_with("7d", "host")
+
+    @patch("app.dados_periodo")
+    @patch("app.call")
+    def test_visao_invalida_cai_no_default(self, mock_call, mock_dados):
+        mock_call.return_value = {"result": "7.4.4"}
+        mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
+        resp = self.client.get("/?visao=departamento")
+        self.assertEqual(resp.status_code, 200)
+        mock_dados.assert_called_once_with("7d", "problema")
 
     @patch("app.dados_periodo")
     @patch("app.call")
@@ -78,6 +96,37 @@ class TestPaginaRelatorios(unittest.TestCase):
         resp = self.client.get("/")
         esperado = f'<meta http-equiv="refresh" content="{painel.TTL_SEGUNDOS}">'.encode("utf-8")
         self.assertIn(esperado, resp.data)
+
+
+class TestMontarGraficoRanking(unittest.TestCase):
+
+    def test_ranking_vazio_devolve_lista_vazia(self):
+        self.assertEqual(painel.montar_grafico_ranking([], "problema"), [])
+
+    def test_largura_relativa_ao_maior_item_exibido(self):
+        ranking = [
+            {"nome": "A", "ocorrencias": 40, "severidade": 3},
+            {"nome": "B", "ocorrencias": 10, "severidade": 2},
+        ]
+        grafico = painel.montar_grafico_ranking(ranking, "problema")
+        self.assertEqual(grafico[0]["largura_pct"], 100.0)
+        self.assertEqual(grafico[1]["largura_pct"], 25.0)
+
+    def test_visao_host_usa_campo_host_como_rotulo(self):
+        ranking = [{"host": "SRV-FORTES", "ocorrencias": 5, "severidade": 4}]
+        grafico = painel.montar_grafico_ranking(ranking, "host")
+        self.assertEqual(grafico[0]["rotulo"], "SRV-FORTES")
+
+    def test_visao_problema_usa_campo_nome_como_rotulo(self):
+        ranking = [{"nome": "ICMP Ping: Unavailable", "ocorrencias": 5, "severidade": 4}]
+        grafico = painel.montar_grafico_ranking(ranking, "problema")
+        self.assertEqual(grafico[0]["rotulo"], "ICMP Ping: Unavailable")
+
+    def test_limita_ao_top_n_grafico(self):
+        ranking = [{"nome": f"P{i}", "ocorrencias": 1, "severidade": 1}
+                   for i in range(painel.TOP_N_GRAFICO + 5)]
+        grafico = painel.montar_grafico_ranking(ranking, "problema")
+        self.assertEqual(len(grafico), painel.TOP_N_GRAFICO)
 
 
 class TestHealth(unittest.TestCase):
@@ -117,9 +166,23 @@ class TestApiRelatoriosDados(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertEqual(body["dados"]["total"], 3)
         self.assertIsNone(body["erro"])
+        mock_dados.assert_called_once_with("30d", "problema")
 
     def test_periodo_invalido_devolve_400(self):
         resp = self.client.get("/api/relatorios/dados?periodo=nao_existe")
+        body = resp.get_json()
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(body["ok"])
+
+    @patch("api.dados_periodo")
+    def test_visao_host_e_repassada(self, mock_dados):
+        mock_dados.return_value = {"total": 0, "por_severidade": {}, "ranking": []}
+        resp = self.client.get("/api/relatorios/dados?periodo=7d&visao=host")
+        self.assertEqual(resp.status_code, 200)
+        mock_dados.assert_called_once_with("7d", "host")
+
+    def test_visao_invalida_devolve_400(self):
+        resp = self.client.get("/api/relatorios/dados?visao=departamento")
         body = resp.get_json()
         self.assertEqual(resp.status_code, 400)
         self.assertFalse(body["ok"])

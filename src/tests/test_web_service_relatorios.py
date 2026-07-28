@@ -38,7 +38,11 @@ class TestDadosPeriodo(unittest.TestCase):
         mock_buscar.return_value = ([], "Conexao: timed out")
         with self.assertRaises(RuntimeError):
             web_relatorios.dados_periodo("hoje")
-        self.assertNotIn("hoje", web_relatorios._cache)
+        self.assertNotIn(("hoje", "problema"), web_relatorios._cache)
+
+    def test_visao_invalida_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            web_relatorios.dados_periodo("hoje", visao="por_departamento")
 
     @patch("relatorios.buscar_eventos")
     def test_segunda_chamada_dentro_do_ttl_usa_cache(self, mock_buscar):
@@ -59,10 +63,41 @@ class TestDadosPeriodo(unittest.TestCase):
         mock_buscar.return_value = ([], None)
         web_relatorios.dados_periodo("365d")
         # simula expiracao do TTL sem esperar 60s de verdade
-        periodo, resultado = "365d", web_relatorios._cache["365d"]
-        web_relatorios._cache["365d"] = (resultado[0] - web_relatorios.TTL_SEGUNDOS - 1, resultado[1])
+        chave = ("365d", "problema")
+        resultado = web_relatorios._cache[chave]
+        web_relatorios._cache[chave] = (resultado[0] - web_relatorios.TTL_SEGUNDOS - 1, resultado[1])
         web_relatorios.dados_periodo("365d")
         self.assertEqual(mock_buscar.call_count, 2)
+
+
+class TestVisaoHost(unittest.TestCase):
+
+    def setUp(self):
+        web_relatorios._cache.clear()
+
+    @patch("relatorios.buscar_eventos")
+    def test_visao_host_devolve_estrutura_esperada(self, mock_buscar):
+        mock_buscar.return_value = ([
+            {"clock": 9999999999, "name": "Problema X", "severity": 3, "hosts": [{"name": "Host A"}]},
+        ], None)
+        dados = web_relatorios.dados_periodo("hoje", visao="host")
+        self.assertEqual(dados["visao"], "host")
+        self.assertEqual(dados["ranking"][0]["host"], "Host A")
+        self.assertEqual(dados["ranking"][0]["problemas"], ["Problema X"])
+
+    @patch("relatorios.buscar_eventos")
+    def test_visoes_diferentes_do_mesmo_periodo_nao_compartilham_cache(self, mock_buscar):
+        mock_buscar.return_value = ([], None)
+        web_relatorios.dados_periodo("7d", visao="problema")
+        web_relatorios.dados_periodo("7d", visao="host")
+        self.assertEqual(mock_buscar.call_count, 2)
+
+    @patch("relatorios.buscar_eventos")
+    def test_mesma_visao_e_periodo_usa_cache(self, mock_buscar):
+        mock_buscar.return_value = ([], None)
+        web_relatorios.dados_periodo("7d", visao="host")
+        web_relatorios.dados_periodo("7d", visao="host")
+        self.assertEqual(mock_buscar.call_count, 1)
 
 
 if __name__ == "__main__":

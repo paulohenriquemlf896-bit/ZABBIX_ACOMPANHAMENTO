@@ -7,9 +7,11 @@ Consolida o que hoje e gerado como HTML estatico por
 scripts/relatorio_problemas.py em uma tela navegavel, sempre atualizada
 (cache de 60s — ver src/web/services/relatorios.py). A pagina se
 autoatualiza no mesmo intervalo do cache (meta refresh — ver
-prompts/tarefas/frontend.txt, item 18, "painel de TV"), preservando o
-periodo selecionado na querystring. Escopo inicial: uma unica visao, sem
-autenticacao (ver specs/dashboard.md e docs/adr/005-painel-web-flask.md).
+prompts/tarefas/frontend.txt, item 18, "painel de TV"), preservando
+periodo e visao selecionados na querystring. Duas visoes de ranking (por
+problema ou por host — ver specs/ranking_por_host.md), cada uma com um
+grafico de barras alem da tabela detalhada. Sem autenticacao (ver
+specs/dashboard.md e docs/adr/005-painel-web-flask.md).
 
 Uso:
   python src/web/app.py
@@ -37,7 +39,7 @@ from flask import Flask, render_template, request  # noqa: E402
 
 from api import bp_api  # noqa: E402
 from relatorios_service import PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts  # noqa: E402
-from services.relatorios import dados_periodo, TTL_SEGUNDOS  # noqa: E402
+from services.relatorios import dados_periodo, TTL_SEGUNDOS, VISOES  # noqa: E402
 from zbx_api import call  # noqa: E402
 
 # =========================================================================
@@ -45,11 +47,38 @@ from zbx_api import call  # noqa: E402
 # =========================================================================
 PAINEL_HOST = os.environ.get("PAINEL_HOST", "127.0.0.1")
 PAINEL_PORT = int(os.environ.get("PAINEL_PORT", "8080"))
-TOP_N = 20
+TOP_N = 20            # quantas linhas a tabela mostra
+TOP_N_GRAFICO = 10    # quantas barras o grafico de ranking mostra (ver specs/ranking_por_host.md)
 # =========================================================================
+
+TITULOS_VISAO = {"problema": "Por problema", "host": "Por host"}
 
 app = Flask(__name__)
 app.register_blueprint(bp_api)
+
+
+def montar_grafico_ranking(ranking, visao):
+    """Converte o ranking (ja formatado por dados_periodo) em itens prontos
+    para o grafico de barras: rotulo (nome do problema ou host, conforme a
+    visao) e largura_pct relativa ao MAIOR valor exibido — nao ao total
+    geral do periodo, para o grafico usar toda a largura disponivel em
+    vez de barras minusculas quando o total for grande (ver
+    prompts/tarefas/frontend.txt e a skill de visualizacao de dados).
+    """
+    subset = ranking[:TOP_N_GRAFICO]
+    if not subset:
+        return []
+    maior = max(g["ocorrencias"] for g in subset)
+    chave_rotulo = "host" if visao == "host" else "nome"
+    return [
+        {
+            "rotulo": g[chave_rotulo],
+            "ocorrencias": g["ocorrencias"],
+            "severidade": g["severidade"],
+            "largura_pct": (g["ocorrencias"] / maior * 100) if maior else 0,
+        }
+        for g in subset
+    ]
 
 
 @app.route("/", methods=["GET"])
@@ -58,12 +87,19 @@ def pagina_relatorios():
     if periodo not in PERIODOS:
         periodo = "7d"
 
+    visao = request.args.get("visao", "problema")
+    if visao not in VISOES:
+        visao = "problema"
+
     v = call("apiinfo.version")
 
     contexto = {
         "periodos": PERIODOS,
         "titulos_periodo": TITULOS_PERIODO,
         "periodo_atual": periodo,
+        "visoes": VISOES,
+        "titulos_visao": TITULOS_VISAO,
+        "visao_atual": visao,
         "sev_nome": SEV_NOME,
         "sev_cor": SEV_COR,
         "top_n": TOP_N,
@@ -72,10 +108,11 @@ def pagina_relatorios():
         "auto_refresh_segundos": TTL_SEGUNDOS,
         "dados": None,
         "erro": None,
+        "grafico_ranking": [],
     }
 
     try:
-        dados = dados_periodo(periodo)
+        dados = dados_periodo(periodo, visao)
     except RuntimeError as e:
         contexto["erro"] = str(e)
         return render_template("index.html", **contexto)
@@ -83,6 +120,7 @@ def pagina_relatorios():
     for g in dados["ranking"]:
         g["ultima_vez_fmt"] = fmt_ts(g["ultima_vez"])
     contexto["dados"] = dados
+    contexto["grafico_ranking"] = montar_grafico_ranking(dados["ranking"], visao)
     return render_template("index.html", **contexto)
 
 

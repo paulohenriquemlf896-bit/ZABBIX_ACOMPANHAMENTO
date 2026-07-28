@@ -38,26 +38,34 @@ anteriores (o histórico de mudança de estado vive no
   `scripts/relatorio_problemas.py` para ser compartilhada com o painel
   web. Testes em `src/tests/test_relatorios_service.py` (16 casos,
   offline). Ver `docs/adr/005-painel-web-flask.md`.
-- **Painel web (Flask) — escopo inicial** — `src/web/` (`app.py`,
-  `api.py`, `services/relatorios.py`). Uma única visão (recorrência de
-  problemas), seletor de período via querystring
-  (`?periodo=hoje|7d|30d|365d`), cache em memória de 60s, rota
-  `GET /health`, endpoint JSON `GET /api/relatorios/dados`. Servido via
-  `waitress` (`python src/web/app.py`). Sem autenticação (fora de
-  escopo desta primeira versão, ver `specs/dashboard.md`). Validado
-  manualmente contra o Zabbix real em 2026-07-28 (todas as 4 janelas,
-  `/health`, whitelist de período). Testes em
+- **Painel web (Flask)** — `src/web/` (`app.py`, `api.py`,
+  `services/relatorios.py`). Duas visões — recorrência por **problema**
+  ou por **host** (`?visao=problema|host`, ver
+  `specs/ranking_por_host.md`) — combinadas com seletor de período
+  (`?periodo=hoje|7d|30d|365d`), cache em memória de 60s (chaveado por
+  período+visão), rota `GET /health`, endpoint JSON
+  `GET /api/relatorios/dados`. Servido via `waitress`
+  (`python src/web/app.py`). Sem autenticação (fora de escopo desta
+  primeira versão, ver `specs/dashboard.md`). Testes em
   `src/tests/test_web_app.py` e `src/tests/test_web_service_relatorios.py`
-  (16 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.
+  (29 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.
 - **Auto-atualização do painel** — a página se atualiza sozinha a cada
   60s (`<meta http-equiv="refresh">`, mesmo intervalo do cache),
-  preservando o período selecionado na querystring; indicador visível
-  "atualiza automaticamente a cada 60s" no cabeçalho. Padrão de "painel
-  de TV" já previsto em `prompts/tarefas/frontend.txt`, item 18 — sem
-  dependência nova, sem processo em segundo plano. Real-time via
+  preservando período e visão selecionados na querystring; indicador
+  visível "atualiza automaticamente a cada 60s" no cabeçalho. Padrão de
+  "painel de TV" já previsto em `prompts/tarefas/frontend.txt`, item 18
+  — sem dependência nova, sem processo em segundo plano. Real-time via
   WebSocket foi avaliado e descartado por ora: exigiria dependência nova
   e processo extra sem ganho real, já que o cache é de 60s (ver decisão
   registrada no CHANGELOG de 2026-07-28).
+- **Gráficos no painel** — barra proporcional de mix de severidade
+  (part-to-whole) e gráfico de barras horizontais do ranking (top 10,
+  comprimento = ocorrências, cor = severidade da linha), em cada uma das
+  duas visões. SVG/CSS puro (sem dependência nova, sem CDN), cor sempre
+  a paleta oficial de severidade do Zabbix já usada nas badges/pills —
+  nunca uma paleta genérica inventada. Testes em
+  `src/tests/test_web_app.py` (`TestMontarGraficoRanking`).
+  Validado manualmente contra o Zabbix real em 2026-07-28.
 
 ## Funcionalidades em andamento
 
@@ -68,7 +76,7 @@ anteriores (o histórico de mudança de estado vive no
 
 - **Painel web — próximas etapas** (fora do escopo inicial, ver
   `specs/dashboard.md`, seção "Fora de escopo desta primeira versão"):
-  autenticação, ranking por host, edição de configuração pela interface.
+  autenticação, edição de configuração pela interface.
 - **Envio automático de relatório por e-mail** — spec em
   `specs/notificacoes.md`. Não iniciado. Infra SMTP do domínio
   `gruporanchoalegre.com.br` (Locaweb) já validada em outro contexto do
@@ -78,8 +86,6 @@ anteriores (o histórico de mudança de estado vive no
 
 Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
 
-- Ranking de problemas recorrentes por **host** (em vez de por nome de
-  problema).
 - Cruzamento Zabbix x GLPI (hosts monitorados sem ativo cadastrado e
   vice-versa).
 - Ajuste de `StartPollersUnreachable` no `zabbix_server.conf` (fora do
@@ -136,10 +142,11 @@ Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
   concluída com sucesso contra dados reais (23.563 eventos,
   `scripts/relatorio_problemas.py` gerou HTML+CSV corretamente) — ver
   `docs/adr/004-centralizacao-cliente-api-zabbix.md`.
-- **Sem repositório git inicializado.** Nenhum histórico de mudança
-  versionado; risco de perda de trabalho não commitado (não é uma
-  urgência técnica, mas é um risco real de continuidade). Ver
-  `prompts/politicas/git.txt`.
+- ~~Sem repositório git inicializado~~ **Resolvido em 2026-07-28** —
+  repositório criado e enviado para
+  `https://github.com/paulohenriquemlf896-bit/ZABBIX_ACOMPANHAMENTO`.
+  `.claude/` (config local da ferramenta de IA, não do projeto)
+  adicionado ao `.gitignore`, junto com o que já era ignorado.
 - **Rede interna sem VPN** — o painel Flask futuro não pode ser exposto
   além da rede local sem essa decisão ser tomada deliberadamente (ver
   `prompts/politicas/seguranca.txt`, item 10).
