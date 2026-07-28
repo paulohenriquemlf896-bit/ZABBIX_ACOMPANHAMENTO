@@ -89,8 +89,10 @@ Sobe em `http://127.0.0.1:8080` via `waitress` (nunca o servidor de debug
 do Flask — ver `prompts/tarefas/backend.txt`, item 13). Ajustável com as
 variáveis `PAINEL_HOST`/`PAINEL_PORT`. Rota `GET /health` expõe status de
 conectividade com o Zabbix; rota `GET /api/relatorios/dados?periodo=...`
-expõe os mesmos dados em JSON (`padroes/padrao_respostas_api.md`).
-Testes em `src/tests/test_web_app.py` e
+expõe os mesmos dados em JSON (`padroes/padrao_respostas_api.md`). Logs
+estruturados em `logs/painel_web.log` (início, falha de comunicação com
+o Zabbix, consultas lentas > 5s — ver `src/logging_util.py` e
+`prompts/politicas/logs.txt`). Testes em `src/tests/test_web_app.py` e
 `src/tests/test_web_service_relatorios.py`.
 
 ## Inventário de scripts (`/scripts`)

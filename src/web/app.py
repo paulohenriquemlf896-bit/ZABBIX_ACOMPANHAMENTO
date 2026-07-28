@@ -30,6 +30,7 @@ docs/adr/005-painel-web-flask.md).
 
 import os
 import sys
+import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -38,6 +39,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from flask import Flask, render_template, request  # noqa: E402
 
 from api import bp_api  # noqa: E402
+from logging_util import configurar_logging  # noqa: E402
 from relatorios_service import PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts  # noqa: E402
 from services.relatorios import dados_periodo, TTL_SEGUNDOS, VISOES  # noqa: E402
 from zbx_api import call  # noqa: E402
@@ -49,15 +51,18 @@ PAINEL_HOST = os.environ.get("PAINEL_HOST", "127.0.0.1")
 PAINEL_PORT = int(os.environ.get("PAINEL_PORT", "8080"))
 TOP_N = 20            # quantas linhas a tabela mostra
 TOP_N_GRAFICO = 10    # quantas barras o grafico de ranking mostra (ver specs/ranking_por_host.md)
+LIMIAR_LENTIDAO_SEGUNDOS = 5  # acima disso, loga WARNING (prompts/politicas/monitoramento.txt, item 7)
 # =========================================================================
 
 TITULOS_VISAO = {"problema": "Por problema", "host": "Por host"}
+
+log = configurar_logging("painel_web")
 
 app = Flask(__name__)
 app.register_blueprint(bp_api)
 
 
-def montar_grafico_ranking(ranking, visao):
+def montar_grafico_ranking(ranking: list[dict], visao: str) -> list[dict]:
     """Converte o ranking (ja formatado por dados_periodo) em itens prontos
     para o grafico de barras: rotulo (nome do problema ou host, conforme a
     visao) e largura_pct relativa ao MAIOR valor exibido — nao ao total
@@ -111,11 +116,16 @@ def pagina_relatorios():
         "grafico_ranking": [],
     }
 
+    inicio = time.monotonic()
     try:
         dados = dados_periodo(periodo, visao)
     except RuntimeError as e:
+        log.warning("Falha ao obter dados do Zabbix (periodo=%s, visao=%s): %s", periodo, visao, e)
         contexto["erro"] = str(e)
         return render_template("index.html", **contexto)
+    duracao = time.monotonic() - inicio
+    if duracao > LIMIAR_LENTIDAO_SEGUNDOS:
+        log.warning("Consulta lenta: periodo=%s visao=%s levou %.1fs", periodo, visao, duracao)
 
     for g in dados["ranking"]:
         g["ultima_vez_fmt"] = fmt_ts(g["ultima_vez"])
@@ -141,5 +151,5 @@ def health():
 
 if __name__ == "__main__":
     from waitress import serve
-    print(f"[OK] Painel disponivel em http://{PAINEL_HOST}:{PAINEL_PORT}")
+    log.info("Painel disponivel em http://%s:%s", PAINEL_HOST, PAINEL_PORT)
     serve(app, host=PAINEL_HOST, port=PAINEL_PORT)

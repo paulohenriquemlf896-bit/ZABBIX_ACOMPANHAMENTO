@@ -16,6 +16,9 @@ src/
 │                            janelas, severidade) — compartilhada entre
 │                            scripts/relatorio_problemas.py e o painel
 │                            web (ver docs/adr/005)
+├── logging_util.py          — configuracao de logging padrao do projeto
+│                            para processos de longa duracao (ver
+│                            prompts/politicas/logs.txt)
 ├── web/                     — painel Flask (ver docs/adr/005 e
 │   ├── app.py               specs/dashboard.md)
 │   ├── api.py
@@ -25,7 +28,9 @@ src/
     ├── test_zbx_api.py
     ├── test_relatorios_service.py
     ├── test_web_service_relatorios.py
-    └── test_web_app.py
+    ├── test_web_app.py
+    ├── test_relatorio_problemas_apresentacao.py
+    └── test_aplicar_exclusao_googleupdater.py
 ```
 
 `zbx_api.py` e `relatorios_service.py` são importados pelos scripts de

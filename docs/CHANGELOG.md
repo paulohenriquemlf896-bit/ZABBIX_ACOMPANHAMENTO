@@ -5,6 +5,35 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-07-28 (9) — Auditoria de conformidade contra prompts/ e correção de 3 gaps
+
+- **Pedido do usuário**: auditoria explícita do que já foi construído
+  contra `prompts/politicas/`, `prompts/tarefas/` e `prompts/workflow/`.
+  Encontrados 3 gaps reais, não sinalizados antes:
+  1. **`prompts/politicas/logs.txt`, item 3** — o painel web (processo
+     de longa duração) só usava `print()`, sem logging estruturado em
+     arquivo. Corrigido: `src/logging_util.py` criado (graduação de
+     `templates/logging.py` para código real, mesmo padrão de
+     `zbx_api.py`); `src/web/app.py` e `src/web/api.py` passam a logar
+     em `logs/painel_web.log` (INFO no início; WARNING em falha de
+     comunicação com o Zabbix e em consultas lentas; ERROR em exceção
+     inesperada). De quebra, fecha também
+     `prompts/politicas/monitoramento.txt`, item 7 (log de rotas lentas
+     > 5s), que também estava pendente sem estar formalmente registrado
+     como dívida.
+  2. **`prompts/politicas/codigo.txt`, item 8** — funções de domínio
+     novas desta sessão (`agregar_por_host()`, `dados_periodo()`,
+     `montar_grafico_ranking()`) sem type hints. Adicionados. Escopo
+     limitado às funções realmente novas — não uma varredura retroativa
+     do arquivo inteiro (fora do que foi pedido).
+  3. **`prompts/politicas/configuracao.txt`** — `.env.example` não
+     listava `PAINEL_HOST`/`PAINEL_PORT`. Adicionados como comentário
+     (são opcionais, já têm default seguro).
+- Suite completa validada após as mudanças: 79 testes, sem alteração de
+  contagem (os gaps eram de conformidade de política, não de lógica sem
+  cobertura). Painel reiniciado manualmente e log de arquivo confirmado
+  funcionando (`logs/painel_web.log`).
+
 ## 2026-07-28 (7) — Repositório git inicializado e publicado
 
 - `git init`, `.claude/` (config local da ferramenta de IA) adicionado

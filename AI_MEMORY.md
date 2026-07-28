@@ -45,7 +45,9 @@ anteriores (o histórico de mudança de estado vive no
   (`?periodo=hoje|7d|30d|365d`), cache em memória de 60s (chaveado por
   período+visão), rota `GET /health`, endpoint JSON
   `GET /api/relatorios/dados`. Servido via `waitress`
-  (`python src/web/app.py`). Sem autenticação (fora de escopo desta
+  (`python src/web/app.py`). Logging estruturado em `logs/painel_web.log`
+  (`src/logging_util.py` — inicio, falha de comunicacao com o Zabbix,
+  consultas > 5s como WARNING). Sem autenticação (fora de escopo desta
   primeira versão, ver `specs/dashboard.md`). Testes em
   `src/tests/test_web_app.py` e `src/tests/test_web_service_relatorios.py`
   (29 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.

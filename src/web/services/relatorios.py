@@ -30,7 +30,7 @@ VISOES = ("problema", "host")
 _cache = {}  # (periodo, visao) -> (timestamp_cache, resultado)
 
 
-def dados_periodo(periodo, visao="problema"):
+def dados_periodo(periodo: str, visao: str = "problema") -> dict:
     """Devolve os dados agregados de um periodo/visao validos, usando
     cache de 60s (ver specs/ranking_por_host.md para a visao "host").
 

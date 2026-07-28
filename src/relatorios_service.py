@@ -133,7 +133,7 @@ def agregar(eventos, desde_ts):
     return ranking, total, por_sev
 
 
-def agregar_por_host(eventos, desde_ts):
+def agregar_por_host(eventos: list[dict], desde_ts: int) -> tuple[list[dict], int, dict[int, int]]:
     """Agrupa por host afetado, contando ocorrencias no periodo (>= desde_ts).
 
     Ver specs/ranking_por_host.md para as regras de negocio completas.
