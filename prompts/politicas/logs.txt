@@ -1,0 +1,56 @@
+POLITICA - LOGS
+==============================
+Padrao de logging, niveis, auditoria e rotacao. Subordinado a
+prompts/politicas/seguranca.txt (nunca logar segredo).
+
+CONSOLE (scripts CLI interativos, uso atual do projeto)
+1. Prefixos padronizados e obrigatorios, ja em uso — manter vocabulario:
+   [OK]      operacao concluida com sucesso
+   [FALHA]   erro que impede continuar (segue de sys.exit != 0)
+   [info]    informacao relevante, nao critica
+   [..]      progresso de operacao demorada
+   [PULADO]  item nao alterado por ja estar no estado esperado
+   [APLICADO] mudanca de configuracao efetivamente escrita
+2. Mensagem de [FALHA] sempre diz O QUE falhou e, quando possivel, O QUE
+   FAZER a respeito (ver 05_ui_ux dentro de prompts/tarefas/frontend.txt, principio de
+   UX aplicado tambem ao console).
+
+LOGGING ESTRUTURADO (processos agendados / servicos de longa duracao)
+3. Usar o modulo logging da stdlib, nunca print() puro nesses casos.
+4. Arquivo de log em /logs/nome_do_script.log (pasta na raiz do projeto).
+5. Formato: "%(asctime)s %(levelname)s %(message)s".
+6. Rotacao por tamanho: RotatingFileHandler, maxBytes=1_000_000,
+   backupCount=5 (padrao — ajustar so com motivo registrado em um ADR
+   novo em docs/adr/).
+7. Niveis:
+   DEBUG    - detalhe tecnico util so em investigacao (nunca em producao
+              por padrao).
+   INFO     - marcos normais de execucao (inicio, fim, contagem de itens
+              processados).
+   WARNING  - situacao anormal mas nao fatal (ex.: teto MAX_EVENTOS
+              atingido, item sem host associado).
+   ERROR    - falha que interrompe a operacao atual mas nao o processo.
+   CRITICAL - falha que interrompe o processo inteiro.
+8. Console mantem os prefixos ja definidos (regra 1); log em arquivo usa
+   os niveis padrao do logging — os dois podem coexistir no mesmo script
+   (StreamHandler + FileHandler).
+
+AUDITORIA
+9. Toda operacao de ESCRITA em sistema externo (Zabbix, e-mail,
+   notificacao) gera uma linha de log com: timestamp, o que foi alterado,
+   valor antes, valor depois, e se foi bem-sucedida. Isso e auditoria
+   minima obrigatoria, nao opcional (ver prompts/politicas/seguranca.txt item 14).
+10. Erros de autenticacao/autorizacao (token rejeitado, permissao negada)
+    sempre logados em WARNING ou superior, nunca silenciados.
+
+O QUE NUNCA LOGAR
+11. Token, senha, segredo de qualquer tipo — nem truncado, nem em DEBUG
+    (ver prompts/politicas/seguranca.txt item 13).
+12. Dado pessoal alem do necessario para operar (nomes de usuarios do
+    Zabbix sao aceitaveis pois sao dados operacionais internos; nao logar
+    alem disso sem necessidade).
+
+PERSISTENCIA
+13. Logs entram no .gitignore (nunca versionados). Retencao pratica:
+    5 arquivos rotacionados por script e suficiente para este porte de
+    projeto; reavaliar se volume crescer muito.

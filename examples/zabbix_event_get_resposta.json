@@ -1,0 +1,34 @@
+{
+  "_comentario": "Exemplo real (dados reais do ambiente, token/URL removidos) de resposta de event.get usada por scripts/relatorio_problemas.py. Ver contexto/api.md.",
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "eventid": "998231",
+      "clock": "1785000193",
+      "name": "Windows: \"GoogleUpdaterInternalService152.0.7933.0\" (Google Updater Internal Service (GoogleUpdaterInternalService152.0.7933.0)) is not running (startup type automatic)",
+      "severity": "3",
+      "hosts": [
+        {"hostid": "10391", "name": "Siagri Nutrane"}
+      ]
+    },
+    {
+      "eventid": "998177",
+      "clock": "1784998680",
+      "name": "ICMP Ping: Unavailable by ICMP ping",
+      "severity": "4",
+      "hosts": [
+        {"hostid": "10455", "name": "Catraca C.Alves"}
+      ]
+    },
+    {
+      "eventid": "998102",
+      "clock": "1784994540",
+      "name": "Acesso Nutrane está fora do ar",
+      "severity": "4",
+      "hosts": [
+        {"hostid": "10391", "name": "Siagri Nutrane"}
+      ]
+    }
+  ],
+  "id": 1
+}

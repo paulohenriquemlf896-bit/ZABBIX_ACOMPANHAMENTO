@@ -1,0 +1,53 @@
+POLITICA - DOCUMENTACAO
+======================================
+Regras para manter README, CHANGELOG, ADRs e documentacao tecnica/
+funcional sempre sincronizados com o codigo. A pasta contexto/ (conhecimento
+permanente do projeto) e tratada em separado nas descricoes de cada
+arquivo dela — ver CLAUDE.md; este prompt foca em docs/.
+
+ESTRUTURA DE docs/
+1. docs/README.md e a porta de entrada do projeto. DEVE conter sempre:
+   - o que o projeto faz (2-3 paragrafos), alinhado a prompts/workflow/missao.txt;
+   - inventario de scripts: nome, o que faz, como rodar, o que gera;
+   - pre-requisitos (Python 3.10+, acesso a rede 192.168.11.x, token);
+   - como configurar credenciais (nomes de variavel de ambiente, SEM
+     valores reais).
+2. docs/CHANGELOG.md em ordem cronologica inversa: data (aaaa-mm-dd), o
+   que mudou e por que. Registrar tambem mudancas feitas NO ZABBIX via
+   API (ex.: "2026-07-27: adicionado GoogleUpdater.* a macro
+   {$SERVICE.NAME.NOT_MATCHES} nos templates Windows — reducao de ruido
+   de ~50% dos eventos"). Mudancas de infraestrutura sao as mais faceis
+   de esquecer e as mais importantes de auditar depois.
+3. docs/adr/ e a fonte unica de decisoes arquiteturais — um arquivo por
+   decisao (NNN-titulo-curto.md), numeracao sequencial nunca reaproveitada.
+   Formato obrigatorio: Contexto -> Problema -> Alternativas avaliadas ->
+   Decisao tomada -> Justificativa -> Consequencias. ADR e imutavel depois
+   de escrito: se a decisao mudar, cria-se um ADR novo que supera o
+   anterior (marcar "Status: Superado por NNN" no antigo), nunca se edita
+   o conteudo de um ADR publicado. contexto/decisoes.md e SOMENTE um
+   indice de navegacao para docs/adr/ — nunca registrar uma decisao nova
+   diretamente nele (ver padroes/estrutura_pastas.md).
+
+REGRAS DE ATUALIZACAO (obrigatorias para a IA, nao opcionais)
+4. Criou script novo -> adicionar ao inventario do README na MESMA tarefa.
+5. Mudou uso/parametros/saida de um script -> atualizar README e
+   docstring na MESMA tarefa. Documentacao desatualizada e pior que
+   ausencia de documentacao.
+6. Executou mudanca de configuracao no Zabbix -> registrar no CHANGELOG
+   imediatamente, com valor ANTES e DEPOIS.
+7. Tomou decisao arquitetural (novo modulo, nova dependencia, novo banco)
+   -> criar um ADR novo em docs/adr/ (ver prompts/politicas/arquitetura.txt).
+8. A docstring de cada script e a documentacao primaria dele: manter
+   sempre correta (o que faz / como usar / o que gera). O README aponta,
+   a docstring detalha.
+9. Item do roadmap concluido -> mover de contexto/roadmap correspondente
+   (ver prompts/workflow/roadmap.txt) para o CHANGELOG.
+
+ESTILO
+10. Documentacao em portugues, direta, com exemplos de comando prontos
+    para copiar (bloco de codigo com o comando completo, caminho incluso).
+11. Sem documentacao decorativa: nenhuma pagina gerada so por gerar. Cada
+    documento existe para responder uma pergunta real de quem chega no
+    projeto (ou volta a ele 6 meses depois).
+12. Segredos NUNCA aparecem em documentacao — nem token, nem senha, nem
+    exemplo com valor real (usar SEU_TOKEN_AQUI). Ver prompts/politicas/seguranca.txt.

@@ -1,0 +1,58 @@
+TAREFA - NOTIFICACOES
+======================================
+Regras para envio de e-mail, Telegram, Teams, WhatsApp e qualquer canal de
+notificacao. Nenhum desses canais esta implementado hoje — este prompt
+define o padrao para quando forem.
+
+PRINCIPIOS GERAIS
+1. Notificacao e um sistema de producao como outro qualquer: erro deve
+   ser tratado, nunca "atirar e esquecer". Envio real exige confirmacao
+   explicita do usuario na primeira vez que um canal novo for acionado em
+   producao (ver prompts/workflow/missao.txt).
+2. Todo envio (sucesso ou falha) e logado com destinatario, canal,
+   assunto/resumo e resultado (ver prompts/politicas/logs.txt item 9, auditoria).
+3. Segredos de cada canal (senha SMTP, token de bot) seguem
+   prompts/politicas/configuracao.txt e prompts/politicas/seguranca.txt — nunca hardcoded.
+
+E-MAIL (SMTP) — primeiro canal previsto
+4. Biblioteca: smtplib + email.mime da stdlib. So considerar biblioteca
+   externa com necessidade real e aprovacao (prompts/politicas/dependencias.txt).
+5. Relatorio por e-mail reaproveita o HTML ja gerado pelos scripts de
+   relatorio (ver prompts/tarefas/frontend.txt) — nao criar um segundo template
+   deconectado do relatorio web/CLI.
+6. Assunto do e-mail e informativo e datado, ex.: "[Zabbix] Relatorio
+   semanal de problemas — 27/07/2026".
+7. Lista de destinatarios em configuracao (env var ou arquivo simples),
+   nunca hardcoded no corpo do script de envio.
+
+TELEGRAM / TEAMS / WHATSAPP — quando forem implementados
+8. Mensagem curta e acionavel (resumo + link/anexo se aplicavel), nao o
+   relatorio inteiro colado no chat.
+9. Respeitar rate limit do provedor: se o volume de alertas puder
+   estourar o limite, agrupar em resumo (digest) em vez de mandar um
+   por evento.
+10. Documentar em contexto/integracoes.md: endpoint/biblioteca usada,
+    formato de credencial e limite de taxa de cada canal assim que for
+    implementado (ver prompts/tarefas/integracoes.txt item 9).
+
+POLITICA DE RETRY
+11. Retry finito e com backoff (ex.: 3 tentativas, intervalo crescente),
+    nunca loop infinito. Apos esgotar as tentativas, registrar falha em
+    log com nivel ERROR e, se possivel, usar um canal alternativo ou pelo
+    menos deixar rastro visivel para quem opera o sistema.
+12. Falha de notificacao NUNCA derruba o processo principal que gerou o
+    dado (ex.: falha ao enviar e-mail nao pode impedir que o relatorio
+    HTML seja salvo em /scripts/saidas).
+
+FILAS (so se o volume justificar)
+13. Enquanto o volume for baixo (poucas notificacoes por dia), envio
+    sincrono direto no script e suficiente. Fila/worker dedicado so entra
+    em cena se houver necessidade real comprovada (ver prompts/politicas/performance.txt,
+    mesmo principio de nao otimizar prematuramente) — registrar a decisao
+    em um ADR novo em docs/adr/ quando/se acontecer.
+
+DIGEST E RUIDO
+14. Preferir resumo periodico (diario/semanal) a alerta unitario sempre
+    que o objetivo for visibilidade de tendencia — alerta unitario e
+    reservado para severidade alta/desastre em tempo real (alinhado ao
+    objetivo de reduzir ruido descrito em prompts/workflow/missao.txt).

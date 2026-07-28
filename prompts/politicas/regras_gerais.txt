@@ -1,0 +1,61 @@
+POLITICA - REGRAS GERAIS
+=====================================
+Convencoes, organizacao e fluxo de trabalho validos para todo o projeto.
+Subordinado a prompts/workflow/missao.txt e prompts/politicas/seguranca.txt.
+
+IDIOMA
+1. Codigo (variaveis, funcoes, classes, arquivos): portugues sem acentos,
+   snake_case. Nunca misturar portugues e ingles de nomenclatura no mesmo
+   arquivo. Padrao ja estabelecido: buscar_eventos, novo_valor,
+   validar_token.py, relatorio_problemas.py — manter.
+2. Mensagens ao usuario final (console, HTML, e-mail, notificacoes):
+   portugues.
+3. Comentarios: portugues, so onde a intencao nao e obvia pelo codigo
+   (ver prompts/politicas/codigo.txt).
+
+ORGANIZACAO DO PROJETO (estrutura fixada em CLAUDE.md)
+4. /src e /scripts sao coisas DIFERENTES — ver padroes/estrutura_pastas.md
+   para a distincao completa (resumo: /src e a aplicacao continua, hoje
+   vazia; /scripts sao os utilitarios pontuais atuais). Saidas geradas
+   (HTML, CSV, PDF) vao em scripts/saidas/, com timestamp no nome:
+   nome_AAAAMMDD_HHMM.ext, criada via os.makedirs(..., exist_ok=True) se
+   nao existir. Este item nao repete a estrutura completa de pastas —
+   padroes/estrutura_pastas.md e a fonte unica sobre onde cada coisa vai.
+5. Codigo comum repetido em 2+ scripts (ex.: funcao call() de acesso a
+   API Zabbix) deve ser extraido para um modulo compartilhado
+   src/zbx_api.py na primeira oportunidade em que um dos scripts for
+   editado por outro motivo. Nao fazer extracao "de brinde" numa tarefa
+   que nao pediu isso, mas sinalizar a duplicacao ao usuario.
+6. Quando o painel Flask nascer, sua estrutura interna e definida em
+   prompts/politicas/arquitetura.txt e prompts/tarefas/backend.txt.
+
+FLUXO DE TRABALHO DA IA
+7. Seguir o fluxo descrito em CLAUDE.md: ler prompts relevantes -> checar
+   contexto/ -> implementar -> atualizar docs/contexto -> testar ->
+   checklist (prompts/workflow/checklist.txt).
+8. Preservar o estilo ja presente no arquivo que estiver sendo editado
+   (prefixos de console, formato de docstring, ordem de secoes).
+9. Nao deixar codigo morto, print de debug ou TODO sem dono. Um TODO so
+   e aceitavel se tiver contexto suficiente para qualquer IA resolve-lo
+   depois sem perguntar ao usuario o que significa.
+10. Toda funcionalidade nova, ao ser concluida, deve ser mencionada no
+    inventario de scripts do README (docs/README.md) e, se relevante, no
+    CHANGELOG (ver prompts/politicas/documentacao.txt).
+
+NOMENCLATURA
+11. Scripts executaveis: verbo_substantivo.py (validar_token.py,
+    relatorio_problemas.py, aplicar_exclusao_googleupdater.py).
+12. Constantes de configuracao: MAIUSCULAS no topo do arquivo, com
+    fallback de os.environ.get quando aplicavel (ver prompts/politicas/configuracao.txt).
+13. Funcoes: verbo_substantivo, uma responsabilidade, nomes que dispensam
+    comentario para entender o que fazem.
+14. Classes (quando existirem): PascalCase; usar so quando houver estado
+    real a encapsular, nunca "classe por classe".
+
+QUALIDADE MINIMA PARA QUALQUER ENTREGA
+15. Roda sem erro; trata falha com mensagem clara (nunca except silencioso
+    — ver prompts/tarefas/backend.txt); nao duplica logica que ja existe em outro
+    arquivo do projeto sem necessidade.
+16. Toda decisao nao obvia (por que SQLite, por que sem framework, por que
+    essa regex) e justificavel e, se relevante para o futuro, registrada em
+    docs/adr/ (arquivo novo por decisao — ver prompts/politicas/documentacao.txt).

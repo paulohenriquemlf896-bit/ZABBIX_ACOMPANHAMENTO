@@ -1,0 +1,46 @@
+WORKFLOW - REFATORACAO
+=====================================
+Regras para quando e como refatorar codigo existente.
+
+QUANDO REFATORAR
+1. Refatorar quando: (a) uma duplicacao real (nao 2-3 linhas triviais)
+   aparecer numa segunda ou terceira ocorrencia, ex.: funcao call() de
+   acesso a API Zabbix repetida em varios scripts; (b) uma mudanca pedida
+   pelo usuario ja exige tocar naquele trecho e a estrutura atual
+   atrapalha; (c) o codigo esta divergindo da arquitetura definida em
+   prompts/politicas/arquitetura.txt de um jeito que vai custar mais caro depois.
+2. NAO refatorar so porque "ficaria mais elegante" numa tarefa que nao
+   pediu isso. Refatoracao oportunista fora de escopo e ruido, nao
+   qualidade (alinhado a prompts/workflow/missao.txt: manutenibilidade nao e pretexto
+   para retrabalho nao pedido).
+3. Se uma refatoracao ampla parecer valiosa mas estiver fora do escopo da
+   tarefa atual, sinalizar a oportunidade ao usuario em vez de executar
+   sem pedir.
+
+COMO REFATORAR
+4. Preservar comportamento observavel: mesma entrada, mesma saida. Se o
+   comportamento precisa mudar, isso e uma mudanca de funcionalidade, nao
+   uma refatoracao — tratar como tal (com os testes e confirmacoes
+   cabiveis).
+5. So refatorar com os testes existentes passando ANTES de comecar. Se
+   nao existirem testes para o trecho, escrever o minimo necessario para
+   ter uma rede de seguranca antes de mexer (ver prompts/politicas/testes.txt).
+6. Rodar os testes de novo DEPOIS da refatoracao e confirmar que
+   continuam passando, sem alterar as asserções para "fazer passar".
+7. Refatoracao em passos pequenos e revisaveis, nao um unico commit
+   gigante que muda tudo de uma vez — mesmo sem git formal, manter as
+   mudancas em blocos logicos claros na conversa/entrega.
+
+COMPATIBILIDADE
+8. Preservar nomes de variavel de ambiente, formato de arquivo de saida
+   e interface de linha de comando dos scripts existentes, a menos que a
+   mudanca de interface seja o proprio objetivo pedido — usuarios e
+   agendamentos (Task Scheduler) dependem desses contratos.
+9. Ao mover codigo de lugar (ex.: extrair para src/zbx_api.py), atualizar
+   todos os pontos que importavam a versao antiga na mesma tarefa; nao
+   deixar duas implementacoes coexistindo "por enquanto".
+
+REGISTRO
+10. Refatoracao estrutural relevante (ex.: extracao de modulo comum,
+    mudanca de camada) e mencionada no CHANGELOG (prompts/politicas/documentacao.txt) e,
+    se envolver decisao de design, em um ADR novo em docs/adr/.

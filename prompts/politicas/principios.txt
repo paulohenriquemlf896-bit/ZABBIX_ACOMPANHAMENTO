@@ -1,0 +1,60 @@
+POLITICA - PRINCIPIOS FUNDAMENTAIS (PRIORIDADE MAXIMA JUNTO COM SEGURANCA)
+=============================================================================
+Estes principios tem precedencia sobre qualquer decisao de implementacao.
+Junto com prompts/politicas/seguranca.txt, formam o topo da hierarquia de
+regras deste projeto (ver ordem de precedencia em CLAUDE.md). Em caso de
+duvida sobre qualquer trade-off tecnico, estes principios decidem.
+
+OS PRINCIPIOS
+1. NUNCA duplicar codigo sem justificativa. Duplicacao trivial (2-3
+   linhas simples) e aceitavel; duplicar uma funcao, um bloco de logica
+   ou um HTML inteiro nao e — extrair para /templates, /padroes ou um
+   modulo comum (ver prompts/politicas/arquitetura.txt e
+   prompts/workflow/evolucao.txt).
+2. PREFERIR reutilizacao a reimplementacao. Antes de escrever codigo
+   novo, verificar se ja existe: um template em /templates, um padrao
+   documentado em /padroes, uma funcao/modulo em /src ou /scripts que
+   resolve o mesmo problema. Esta verificacao e OBRIGATORIA e esta
+   repetida em CLAUDE.md como regra de bootstrap.
+3. DOCUMENTAR decisoes importantes. Toda decisao que mudaria a resposta
+   de "como isso deveria ser construido?" para uma IA futura vira um ADR
+   em docs/adr/ (nao um comentario perdido no codigo, nao so a memoria da
+   conversa). Ver prompts/politicas/documentacao.txt.
+4. EXPLICAR trade-offs antes de mudancas arquiteturais. Nenhuma mudanca
+   estrutural (novo banco, novo framework, nova camada) e feita sem
+   apresentar o porque e as alternativas consideradas — mesmo que
+   brevemente — antes de implementar.
+5. EVITAR dependencias desnecessarias. A biblioteca padrao do Python e a
+   primeira escolha sempre. Uma dependencia nova exige necessidade real e
+   aprovacao (ver prompts/politicas/dependencias.txt).
+6. MANTER retrocompatibilidade sempre que possivel. Scripts existentes,
+   variaveis de ambiente, formatos de arquivo de saida e nomes de
+   funcao/modulo publicamente usados nao mudam de interface sem motivo
+   forte — e quando mudam, e uma decisao explicita, nao efeito colateral.
+7. PERGUNTAR ao usuario antes de alteracoes destrutivas. Apagar dados,
+   sobrescrever configuracao, remover funcionalidade, fazer mudanca em
+   producao (Zabbix, e-mail, notificacao) — tudo isso exige confirmacao
+   explicita (ver prompts/workflow/missao.txt, criterios de confirmacao).
+8. PRESERVAR simplicidade sempre que possivel. Entre duas solucoes
+   equivalentes, vence a mais simples de entender e manter — nao a mais
+   sofisticada, nao a mais "escalavel para um cenario hipotetico" que o
+   projeto nao tem hoje.
+9. MANTER o projeto modular. Cada arquivo, funcao e prompt tem uma
+   responsabilidade unica e clara (ver prompts/politicas/arquitetura.txt).
+   Crescimento desordenado (misturar assuntos "para nao criar mais um
+   arquivo") e sempre pior do que um arquivo novo bem nomeado.
+10. PRESERVAR consistencia arquitetural. Codigo novo segue os padroes ja
+    estabelecidos em /padroes e nos prompts existentes, mesmo quando uma
+    abordagem diferente pareceria "melhor" isoladamente — mudar um padrao
+    estabelecido e uma decisao deliberada (item 4), nao uma escolha
+    pontual de uma tarefa.
+
+COMO USAR ESTES PRINCIPIOS NA PRATICA
+11. Ao hesitar entre duas abordagens tecnicas, testar cada uma contra
+    esta lista, na ordem: seguranca (prompts/politicas/seguranca.txt) >
+    estes principios > o prompt especifico do tema (backend, frontend
+    etc.) > preferencia estetica pessoal da IA (que nunca deve decidir
+    sozinha em caso de conflito real — nesse caso, perguntar ao usuario).
+12. Estes principios nao substituem os prompts especificos — eles filtram
+    QUALQUER prompt especifico que, lido isoladamente, parecesse justificar
+    quebrar um deles.

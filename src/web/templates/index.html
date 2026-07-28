@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import badge_severidade, pill_severidade %}
+
+{% block titulo %}Problemas recorrentes — Acompanhamento Zabbix{% endblock %}
+{% block subtitulo %}Zabbix {{ versao_api }} &middot; gerado em {{ gerado }}{% endblock %}
+
+{% block conteudo %}
+<nav class="periodos">
+  {% for p in periodos %}
+    <a href="{{ url_for('pagina_relatorios', periodo=p) }}"
+       class="{{ 'ativo' if p == periodo_atual else '' }}">{{ titulos_periodo[p] }}</a>
+  {% endfor %}
+</nav>
+
+{% if erro %}
+  <section><p class="vazio">Nao foi possivel carregar os dados: {{ erro }}</p></section>
+{% else %}
+<section>
+  <h2>{{ titulos_periodo[periodo_atual] }}</h2>
+  <div class="sevrow"><b>Total: {{ dados.total }}</b> &nbsp;
+    {% for sev, n in dados.por_severidade.items() %}
+      {% if n > 0 %}{{ pill_severidade(sev_nome[sev], sev_cor[sev], n) }}{% endif %}
+    {% endfor %}
+  </div>
+
+  {% if not dados.ranking %}
+    <p class="vazio">Nenhum problema registrado neste periodo.</p>
+  {% else %}
+  <div class="tabela-scroll">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Problema</th><th>Ocorr.</th><th>%</th>
+      <th>Gravidade</th><th>Hosts afetados</th><th>Ultima vez</th>
+    </tr></thead>
+    <tbody>
+      {% for g in dados.ranking[:top_n] %}
+      <tr>
+        <td class="rank">{{ loop.index }}</td>
+        <td class="nome">{{ g.nome }}</td>
+        <td class="num">{{ g.ocorrencias }}</td>
+        <td class="num">{{ "%.1f"|format(g.ocorrencias / dados.total * 100 if dados.total else 0) }}%</td>
+        <td>{{ badge_severidade(sev_nome[g.severidade], sev_cor[g.severidade]) }}</td>
+        <td class="hosts">{{ g.hosts|join(", ") }}</td>
+        <td class="data">{{ g.ultima_vez_fmt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

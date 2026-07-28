@@ -1,0 +1,81 @@
+WORKFLOW - MISSAO DO PROJETO
+=========================================
+Este e o prompt mais importante do projeto. Em caso de duvida sobre "vale a
+pena fazer isso assim?", a resposta esta aqui.
+
+MISSAO
+Dar visibilidade confiavel e acionavel sobre a saude da infraestrutura de TI
+do Grupo Rancho monitorada pelo Zabbix, transformando dados brutos de
+monitoramento em relatorios e paineis que uma pessoa tecnica ou um gestor
+consigam usar para decidir o que corrigir primeiro.
+
+OBJETIVOS
+1. Reduzir ruido: separar problema real de falso positivo (ex.: caso
+   GoogleUpdater resolvido em 2026-07-27 — ver
+   docs/adr/002-correcao-ruido-googleupdater.md).
+2. Dar recorrencia e tendencia, nao so foto do momento (o dashboard nativo
+   do Zabbix ja mostra "agora"; este projeto mostra "o que se repete e
+   piora ao longo do tempo").
+3. Automatizar o que hoje e feito manualmente (checar dashboard, gerar
+   relatorio, mandar e-mail) sem perder a possibilidade de auditoria humana.
+4. Nunca ser uma segunda fonte da verdade: o Zabbix e a fonte; este projeto
+   e uma lente sobre ele.
+
+FILOSOFIA DE DESENVOLVIMENTO
+- Simplicidade que resiste ao tempo vale mais que sofisticacao que
+  ninguem vai manter. Preferir solucoes com stdlib e SQLite a stacks
+  complexas, enquanto a escala do projeto (uma empresa, ~25 hosts) nao
+  exigir o contrario.
+- Escrever para o "eu" (ou outra IA) que voltar a este codigo em 6 meses
+  sem contexto nenhum: nomes claros, docstrings corretas, docs atualizadas.
+- Preferir corrigir a causa raiz (ex.: ajustar macro no template) a
+  mascarar sintoma (ex.: silenciar alerta sem entender por que dispara).
+
+PRIORIDADES (ORDEM ABSOLUTA, REPETIDA DE CLAUDE.md)
+1. Seguranca
+2. Estabilidade
+3. Manutenibilidade
+4. Escalabilidade
+5. Performance
+6. Novas funcionalidades
+Uma funcionalidade nova NUNCA justifica abrir mao de qualquer item acima
+dela nesta lista. Se um pedido do usuario parecer exigir isso, apontar o
+trade-off explicitamente antes de implementar.
+
+PRINCIPIOS ARQUITETURAIS
+- API do Zabbix e a UNICA fonte de dados de monitoramento (ver
+  prompts/tarefas/integracoes.txt e prompts/tarefas/banco_de_dados.txt).
+- Leitura e livre; escrita em sistemas de producao (Zabbix, e-mail,
+  notificacoes) e sempre deliberada, confirmada e auditavel.
+- Cada camada tem uma responsabilidade (ver prompts/politicas/arquitetura.txt);
+  cada prompt tem uma responsabilidade; cada script tem uma responsabilidade.
+
+REGRAS QUE NUNCA PODEM SER QUEBRADAS
+1. Nunca commitar ou expor credencial, token ou segredo (prompts/politicas/seguranca.txt
+   tem prioridade maxima sobre qualquer outra regra deste projeto).
+2. Nunca executar acao de ESCRITA em sistema de producao (Zabbix, e-mail
+   real, notificacao real) sem confirmacao explicita do usuario.
+3. Nunca apagar ou sobrescrever dados sem entender o que ja existia
+   (investigar antes de destruir — vale para configuracao do Zabbix, para
+   arquivos locais e para o banco proprio quando existir).
+4. Nunca deixar uma tarefa "quase pronta" sem avisar claramente o que falta.
+5. Nunca inventar dado, numero ou comportamento do Zabbix nao verificado
+   via API ou documentacao oficial.
+6. Nunca sacrificar a arquitetura definida em prompts/politicas/arquitetura.txt so para
+   entregar mais rapido.
+
+CRITERIOS PARA SOLICITAR CONFIRMACAO DO USUARIO
+Pedir confirmacao explicita ANTES de:
+- Qualquer chamada de escrita a API do Zabbix (*.create/update/delete,
+  usermacro.update etc.);
+- Enviar e-mail, mensagem de Telegram/Teams/WhatsApp real;
+- Apagar arquivos, tabelas ou registros existentes;
+- Adicionar uma dependencia externa nova;
+- Mudar estrutura de pastas ja estabelecida ou renomear/mover algo que o
+  usuario possa estar referenciando em outro lugar;
+- Publicar/expor qualquer coisa fora da rede interna;
+- Tomar uma decisao arquitetural relevante (novo banco, novo framework,
+  nova forma de autenticacao) sem que o usuario tenha pedido isso
+  especificamente.
+Nao e necessario confirmar para: leitura na API, criacao de relatorios,
+escrita de codigo/testes/documentacao dentro da estrutura ja aprovada.

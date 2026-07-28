@@ -1,0 +1,75 @@
+TAREFA - FRONTEND (UX/UI E COMPONENTES)
+========================================================
+Regras para toda interface deste projeto: relatorios HTML gerados por
+script e, futuramente, o painel Flask. Cobre estrutura, identidade visual,
+responsividade e acessibilidade num unico lugar — nao dividir esse assunto
+em mais de um prompt.
+
+PRINCIPIOS
+1. Publico interno (TI e gestao do Grupo Rancho). Prioridade nesta ordem:
+   clareza da informacao > velocidade de carregamento > estetica.
+2. Tudo funciona OFFLINE na rede interna: NUNCA usar CDN, Google Fonts ou
+   qualquer recurso externo. CSS/JS sempre inline (relatorios gerados) ou
+   em src/web/static (painel).
+3. Uma pagina responde uma pergunta (ex.: "quais problemas mais se
+   repetem?"). Nao misturar assuntos diferentes na mesma tela.
+
+IDENTIDADE VISUAL (paleta fixa — nao inventar variacoes)
+4. Fundo da pagina #f7f8fa | Cartoes/secoes #ffffff com borda #e3e6ea |
+   Texto principal #222 | Texto secundario #666 / #888 | Cabecalho de
+   tabela #f0f2f5 | Zebra #fafbfc.
+5. Cores de severidade EXCLUSIVAMENTE as oficiais do Zabbix: Desastre
+   #E45959, Alta #E97659, Media #FFA059, Aviso #FFC859, Informacao
+   #7499FF, Nao classificado #97AAB3. O usuario ja associa essas cores no
+   dashboard nativo — nunca ressignifica-las para outra coisa.
+6. Verde de sucesso/disponivel #59B54F, usado apenas para estado positivo
+   real, nunca decorativo.
+7. Tipografia: Segoe UI, Arial, sans-serif (fontes de sistema). h1 ~24px,
+   h2 ~18px, corpo 13-14px, notas 12px. Numeros tabulares em tabelas.
+8. Cantos arredondados discretos (6-8px), padding generoso (16-20px em
+   cartoes), bordas 1px — sem sombras fortes ou gradiente.
+
+ESTRUTURA PADRAO DE TELA/RELATORIO
+9. Todo relatorio/tela segue o mesmo esqueleto:
+   a) titulo claro que responde "o que estou vendo?";
+   b) linha de contexto: origem dos dados, periodo, data/hora de geracao;
+   c) resumo executivo ANTES do detalhe (totais, pills de severidade);
+   d) detalhe em tabelas/graficos;
+   e) rodape com nota metodologica.
+10. Ordenacao padrao do mais critico/frequente para o menos. O usuario nao
+    deve precisar reordenar para ver o que importa.
+11. Numeros grandes com separador de milhar; percentuais com 1 casa
+    decimal; datas dd/mm/aaaa hh:mm; duracao em formato humano.
+12. Estado vazio sempre com mensagem explicita ("Nenhum problema
+    registrado neste periodo."), nunca tabela vazia muda.
+13. Todo texto vindo do Zabbix (nomes de problema, host) passa por
+    html.escape() antes de entrar no HTML.
+
+RELATORIOS HTML GERADOS POR SCRIPT (documento autocontido)
+14. <!doctype html>, lang="pt-br", charset utf-8, CSS embutido em <style>.
+    Nada de arquivo externo.
+15. Incluir sempre @media print (fundo branco, sem quebra dentro de
+    <section>) para impressao/PDF limpa.
+
+PAINEL FLASK (quando existir)
+16. base.html com header/menu/footer; componentes repetidos (tabela de
+    problemas, badge de severidade, cartao de resumo) viram macros Jinja
+    em src/web/templates/_componentes.html — nunca copiar/colar HTML de
+    componente entre paginas.
+17. JavaScript minimo e vanilla (fetch + DOM); sem framework JS sem
+    aprovacao explicita do usuario. Estado da tela vive na querystring
+    (?periodo=7d&host=...) para toda visao ser compartilhavel por link.
+18. Auto-refresh de paineis de TV via meta refresh ou fetch periodico de
+    60s, sempre mostrando "atualizado em HH:MM:SS".
+
+RESPONSIVIDADE E ACESSIBILIDADE
+19. Layout funciona de 360px (celular) a TV full HD. Tabelas largas
+    ganham overflow-x:auto no container; a pagina nunca rola na horizontal.
+20. Contraste minimo AA (4.5:1); nunca transmitir informacao so por cor —
+    badge de severidade sempre tem o texto junto ("Alta", nao so laranja).
+21. HTML semantico: table para dados tabulares, th com scope, <button>
+    para acao, <a> para navegacao.
+
+CONSISTENCIA
+22. Antes de criar componente ou estilo novo, verificar se ja existe
+    padrao equivalente nos relatorios existentes e reutilizar.

@@ -1,0 +1,61 @@
+POLITICA - ARQUITETURA
+====================================
+Define como as camadas do sistema se organizam e se relacionam.
+Subordinado a prompts/workflow/missao.txt e prompts/politicas/seguranca.txt.
+
+CAMADAS (ESTADO ATUAL E ALVO)
+1. Camada de integracao (src/zbx_api.py, quando extraida): unica parte do
+   sistema que sabe falar HTTP/JSON-RPC com o Zabbix. Ninguem mais monta
+   requisicao HTTP diretamente.
+2. Camada de dominio/servico: funcoes que recebem dados ja obtidos da
+   integracao e aplicam regra de negocio (ex.: agregar() em
+   relatorio_problemas.py, que agrupa eventos por problema e calcula
+   recorrencia). Nao conhece HTTP nem formato de tela.
+3. Camada de apresentacao: monta HTML/CSV/console a partir do resultado da
+   camada de dominio (ex.: tabela_html(), barra_sev()). Nao faz calculo de
+   negocio nem chama a API.
+4. Camada de entrada (main() de cada script, ou rotas Flask no futuro):
+   orquestra as outras tres, le configuracao, decide o que fazer.
+Ao editar codigo existente, migrar na direcao dessas camadas quando a
+alteracao ja tocar naquele trecho; nao fazer refatoracao ampla nao pedida
+(ver prompts/workflow/refatoracao.txt).
+
+SOLID (aplicado no tamanho deste projeto, sem exagero)
+5. Responsabilidade unica: uma funcao, um motivo para mudar. Um script,
+   um relatorio/uma acao.
+6. Aberto/fechado: novas janelas de tempo, severidades ou formatos de
+   saida devem ser extensiveis por parametro/config, nao por duplicar a
+   funcao inteira.
+7. Inversao de dependencia: a camada de dominio recebe dados prontos
+   (lista de eventos), nao decide como busca-los — isso permite testar
+   agregar() sem rede (ver prompts/politicas/testes.txt).
+
+DRY E KISS
+8. Duplicar 2-3 linhas simples e aceitavel; duplicar uma funcao inteira
+   (como call() da API) entre scripts nao e — extrair para modulo comum
+   assim que tocar em um desses scripts de novo.
+9. Preferir a solucao mais simples que resolve o problema real de hoje.
+   Nao construir abstracao para um caso hipotetico futuro (ex.: nao criar
+   suporte a "multiplos servidores Zabbix" enquanto so existir um).
+
+MODULARIZACAO E DESACOPLAMENTO
+10. Um modulo nao importa detalhes internos de outro; troca dados por
+    parametros e retorno, nao por estado global compartilhado.
+11. Configuracao (URL, token, flags) e injetada via variavel de
+    ambiente/constantes de topo, nunca hardcoded no meio da logica.
+12. O painel Flask (quando existir) NUNCA chama a API do Zabbix direto da
+    rota — sempre via camada de servico, para poder ser testado com mock
+    e para manter uma unica porta de saida a auditar (prompts/politicas/seguranca.txt).
+
+DECISOES ARQUITETURAIS JA TOMADAS
+13. Ver docs/adr/ para o registro formal (contexto/decisoes.md e so um
+    indice de navegacao para la — ver prompts/politicas/documentacao.txt).
+    Regra geral: toda decisao que mudaria a resposta de "como isso deveria
+    ser construido?" para uma IA futura precisa estar la, nao só na
+    memoria da conversa.
+
+QUANDO MUDAR A ARQUITETURA
+14. Mudanca estrutural (novo banco, novo framework web, nova forma de
+    autenticacao, split em multiplos servicos) exige: (a) registrar o
+    motivo em um ADR novo em docs/adr/, (b) confirmacao explicita do usuario
+    (ver prompts/workflow/missao.txt), (c) avaliacao de impacto nos scripts existentes.

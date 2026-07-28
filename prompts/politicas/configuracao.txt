@@ -1,0 +1,51 @@
+POLITICA - CONFIGURACAO
+======================================
+Regras para configuracao por ambiente, variaveis e parametros.
+Subordinado a prompts/politicas/seguranca.txt em tudo que envolve segredo.
+
+VARIAVEIS DE AMBIENTE / .env
+1. Toda configuracao que varia por ambiente ou e sensivel vive em
+   variavel de ambiente, com um arquivo .env local (nao versionado — ver
+   prompts/politicas/git.txt) carregavel pelos scripts.
+2. Nomenclatura ja estabelecida e obrigatoria de manter: ZBX_URL,
+   ZBX_TOKEN. Novas integracoes seguem o mesmo padrao de prefixo
+   (ex.: SMTP_HOST, SMTP_PORT, SMTP_USUARIO, SMTP_SENHA,
+   TELEGRAM_BOT_TOKEN).
+3. Cada script le config no topo do arquivo, em bloco claramente
+   demarcado com "====", usando os.environ.get("VAR", default_seguro).
+   Ver prompts/politicas/seguranca.txt item 2 sobre migrar o default do token para "".
+4. Um .env.example (sem valores reais, so os nomes das variaveis e um
+   comentario do que cada uma significa) deve existir em docs/ ou na raiz
+   para orientar configuracao nova — nunca conter valor real.
+
+PARAMETROS DE COMPORTAMENTO (nao sensiveis)
+5. Constantes ajustaveis (MAX_EVENTOS, TOP_N, VERIFY_SSL) ficam tambem no
+   bloco de configuracao do topo do script, com comentario explicando o
+   efeito de mudar o valor.
+6. Nao esconder "magic numbers" no meio da logica — se um valor pode
+   precisar ser ajustado por quem opera o script, ele vai para o bloco de
+   configuracao.
+
+CONFIGURACAO POR AMBIENTE (quando existir mais de um: dev/producao)
+7. Hoje o projeto roda contra o Zabbix real (nao ha ambiente de
+   homologacao separado). Se isso mudar, usar um unico mecanismo de
+   selecao de ambiente (ex.: variavel AMBIENTE=producao|dev) em vez de
+   arquivos de config paralelos duplicados.
+8. Nunca apontar acidentalmente um script de teste para o Zabbix de
+   producao sem intencao clara — se ambientes multiplos existirem, o
+   ambiente ativo deve ser impresso no cabecalho de saida de todo script
+   (ja e o padrao: "Endpoint: ...").
+
+PADROES DEFAULT SEGUROS
+9. Quando um default fizer sentido (ex.: VERIFY_SSL = True), o default e
+   sempre a opcao mais segura; o usuario opta explicitamente por menos
+   seguranca (ex.: desligar verificacao de certificado) e nunca o
+   contrario.
+10. Timeout de rede sempre com valor default explicito no codigo, nunca
+    dependendo do default da biblioteca.
+
+PAINEL FLASK (quando existir)
+11. Configuracao do Flask (SECRET_KEY, modo debug, host/porta de bind)
+    tambem via variavel de ambiente; SECRET_KEY nunca hardcoded nem
+    reaproveitada de exemplo publico. Debug=False por padrao (ver
+    prompts/politicas/seguranca.txt item 10 sobre exposicao).

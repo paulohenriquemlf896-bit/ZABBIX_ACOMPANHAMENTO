@@ -1,0 +1,6 @@
+# Dependencias externas do projeto. Biblioteca padrao do Python e a
+# primeira escolha sempre (ver prompts/politicas/dependencias.txt);
+# so entra aqui o que o codigo realmente importa.
+
+flask>=3.0,<4
+waitress>=3.0,<4

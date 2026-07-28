@@ -1,0 +1,78 @@
+POLITICA - SEGURANCA (PRIORIDADE MAXIMA)
+========================================================
+Este prompt tem precedencia sobre QUALQUER outro prompt do projeto, sem
+excecao. Em caso de conflito, este vence — inclusive sobre prompts/workflow/missao.txt
+em questoes especificamente de seguranca.
+
+SEGREDOS E CREDENCIAIS
+1. NUNCA escrever token, senha ou credencial em codigo novo, documentacao,
+   CHANGELOG, teste ou fixture. Padrao obrigatorio: variavel de ambiente
+   ou arquivo .env local carregado no inicio (ver prompts/politicas/configuracao.txt).
+2. DIVIDA CONHECIDA (registrar tambem em AI_MEMORY.md, secao Dividas
+   tecnicas): os
+   scripts atuais tem o token do Zabbix embutido como valor default de
+   os.environ.get(). Ao editar qualquer um desses scripts por outro
+   motivo, migrar o default para "" e passar a exigir a variavel de
+   ambiente/.env, avisando o usuario claramente antes.
+3. .gitignore obrigatorio (criar/manter) com: .env, *.db, /dados,
+   /scripts/saidas, /logs, __pycache__/. Se o projeto for versionado em git,
+   o token atual do Zabbix DEVE ser revogado e substituido antes do
+   primeiro commit (historico de git vaza segredo mesmo apagado depois).
+4. Relatorios gerados e logs nao exibem token nem URL com credenciais
+   embutidas. Exibir o endpoint puro (sem credencial) e aceitavel em rede
+   interna.
+
+PRIVILEGIO MINIMO NO ZABBIX
+5. O token atual pertence ao usuario Admin (Super admin) — poder total de
+   leitura e escrita. Recomendacao permanente e ativa: criar usuario
+   dedicado read-only (ex.: svc_relatorios) com acesso apenas aos host
+   groups necessarios, com token proprio, para todo script que so le
+   dados. Reforcar essa recomendacao a cada script de leitura novo.
+6. Scripts de ESCRITA no Zabbix exigem: confirmacao explicita do usuario
+   antes de executar; impressao do estado ANTES/DEPOIS; idempotencia.
+   Nunca encadear escrita em massa sem listar exatamente o que sera
+   alterado antes de aplicar.
+7. Tokens com expiracao definida quando possivel; revogar tokens sem uso.
+
+VALIDACAO DE ENTRADAS
+8. Todo dado externo e nao confiavel — inclusive respostas do Zabbix
+   (nomes de problema/host sao texto livre digitado por administradores):
+   - saida HTML: sempre html.escape();
+   - SQL (quando houver banco): sempre parametros "?", nunca
+     concatenacao/f-string com dado externo;
+   - shell: NUNCA interpolar dado externo em comando de shell;
+   - caminho de arquivo: nunca montar caminho com dado externo sem
+     sanitizar (os.path.basename / validacao de caracteres permitidos).
+9. No futuro painel Flask: autoescape de template sempre ligado, validar
+   querystring com whitelist (ex.: periodo in {"hoje","7d","30d","365d"}),
+   limitar tamanho de qualquer parametro recebido.
+
+REDE E EXPOSICAO
+10. O painel web, quando existir, e de uso INTERNO: bind em IP da rede
+    local, nunca 0.0.0.0 exposto a internet. Acesso externo exige VPN ou
+    reverse proxy avaliado junto com o usuario — nunca improvisado.
+11. HTTP interno (192.168.11.12) e aceito por decisao do ambiente atual;
+    ao tocar em configuracao de servidor, sugerir HTTPS quando fizer
+    sentido, sem forcar migracao fora de escopo.
+12. Timeout obrigatorio em toda chamada de rede. Nunca retry infinito
+    (politica de retry finita e explicita — ver prompts/tarefas/notificacoes.txt para
+    o caso de notificacoes).
+
+LOGS E AUDITORIA
+13. Nao logar dados sensiveis (token, senha) em nenhum arquivo de log,
+    nem em nivel DEBUG (ver prompts/politicas/logs.txt).
+14. Toda escrita em producao (Zabbix, e-mail, notificacao) deixa rastro
+    auditavel: quem/quando/o-que, minimamente no log e idealmente tambem
+    no CHANGELOG (ver prompts/politicas/documentacao.txt) quando for mudanca de config.
+
+DEPENDENCIAS
+15. Dependencia nova (se aprovada — ver prompts/politicas/dependencias.txt) deve vir de
+    fonte oficial (PyPI), com nome conferido letra a letra
+    (typosquatting), e revisada quanto a necessidade real antes de add.
+
+DEVER DE ALERTAR
+16. Ao encontrar vulnerabilidade, segredo exposto ou pratica insegura em
+    codigo existente — mesmo fora do escopo da tarefa atual — avisar o
+    usuario imediatamente e propor correcao. Nunca ignorar por "nao fazer
+    parte da tarefa" (ver tambem prompts/workflow/missao.txt, regra que nunca pode ser
+    quebrada #1).

@@ -1,0 +1,57 @@
+POLITICA - PERFORMANCE
+=====================================
+Regras de desempenho. Este projeto opera em escala pequena (~25 hosts,
+uma empresa) — otimizacao prematura e tao errada quanto lentidao evitavel.
+Medir antes de otimizar.
+
+CONSULTAS A API DO ZABBIX
+1. Sempre filtrar no servidor (time_from, value, source, hostids,
+   "output" com campos especificos) — nunca trazer tudo para filtrar em
+   Python (ver prompts/tarefas/backend.txt).
+2. Preferir trend.get a history.get quando o relatorio nao precisa de
+   granularidade fina (trend.get e agregado por hora e muito mais leve
+   para janelas longas).
+3. Definir e respeitar um teto de itens por consulta (padrao MAX_EVENTOS
+   ja usado); se o teto for atingido, avisar o usuario em vez de truncar
+   silenciosamente.
+4. Meta pratica: um relatorio interativo deve responder em ate ~10s; um
+   relatorio agendado (batch) pode levar mais, mas nunca sem feedback de
+   progresso ([..] no console — ver prompts/politicas/logs.txt).
+5. Se uma consulta especifica passar de ~30s, investigar antes de aceitar:
+   reduzir janela, paginar, usar trend em vez de history, ou introduzir
+   cache (item 8).
+
+BANCO PROPRIO (quando existir — ver prompts/tarefas/banco_de_dados.txt)
+6. Indices nas colunas usadas em filtro/ordenacao. Escrita em lote com
+   executemany + transacao unica. EXPLAIN QUERY PLAN antes de aceitar uma
+   consulta de relatorio como pronta.
+
+CACHE
+7. Cache em memoria (dict com timestamp) e suficiente para este porte,
+   TTL padrao 60s no painel Flask para consultas repetidas ao Zabbix.
+   Nunca cachear resultado de chamada de escrita.
+8. Se o mesmo relatorio for gerado varias vezes ao dia com os mesmos
+   parametros, considerar persistir o resultado em /scripts/saidas e servir o
+   arquivo em vez de reprocessar — so implementar quando isso for uma dor
+   real, nao preventivamente.
+
+CONCORRENCIA
+9. Scripts CLI deste projeto sao sequenciais por padrao — isso e
+   aceitavel na escala atual. So introduzir concorrencia (threads,
+   asyncio) se uma consulta especifica for identificada como gargalo real
+   e a complexidade adicional for justificada e registrada em um ADR
+   novo em docs/adr/.
+10. O futuro painel Flask, servido via waitress/gunicorn (ver
+    prompts/tarefas/backend.txt), ja da concorrencia de requisicoes suficiente para o
+    volume de usuarios interno esperado — nao adicionar fila/worker
+    dedicado sem necessidade comprovada.
+
+MEMORIA
+11. Nao carregar em memoria mais do que o necessario para o relatorio
+    atual; se MAX_EVENTOS crescer muito, avaliar processar em streaming/
+    paginas em vez de uma lista unica gigante.
+
+REGRA GERAL
+12. Nunca otimizar as custas de legibilidade sem medir primeiro que a
+    otimizacao resolve um problema real (ver prompts/workflow/missao.txt: performance e
+    prioridade 5, abaixo de manutenibilidade).

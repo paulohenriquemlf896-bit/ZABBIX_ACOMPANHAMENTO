@@ -1,0 +1,46 @@
+POLITICA - MONITORAMENTO (DO PROPRIO SISTEMA)
+=============================================================
+Este projeto monitora a infraestrutura do Grupo Rancho via Zabbix. Este
+prompt trata de MONITORAR O PROPRIO PROJETO — seus scripts, agendamentos e
+(futuro) painel — para saber se ele mesmo esta saudavel.
+
+POR QUE ISSO IMPORTA
+1. Um relatorio de disponibilidade que falha silenciosamente e pior que
+   nao existir: gera falsa confianca. Toda automacao deste projeto precisa
+   de um jeito de se saber se rodou e se rodou certo.
+
+SCRIPTS CLI E TAREFAS AGENDADAS (estado atual/curto prazo)
+2. Todo script agendado (Task Scheduler, cron) registra em /logs se
+   executou, quando, e o resultado (sucesso/falha/contagem de itens) —
+   ver prompts/politicas/logs.txt.
+3. Um script agendado que falha deve ter uma forma de alertar (ver
+   prompts/tarefas/notificacoes.txt) — nao basta so logar se ninguem le o log.
+4. Antes de agendar qualquer script, validar manualmente que ele roda
+   limpo pelo menos uma vez (checklist prompts/workflow/checklist.txt).
+
+PAINEL FLASK (quando existir)
+5. Expor uma rota /health (ou /api/health) que retorna JSON simples:
+   {"ok": bool, "zabbix_alcancavel": bool, "versao_api": str,
+    "hora_servidor": str}. Sem autenticacao (rede interna), sem dado
+    sensivel.
+6. /health verifica conectividade real com o Zabbix (chamada leve, ex.
+   apiinfo.version) — nao apenas "o processo Flask esta de pe".
+7. Tempo de resposta de rotas que consultam a API deve ser logado quando
+   ultrapassar um limiar (ex.: > 5s) como WARNING, para identificar
+   degradacao antes que vire reclamacao de usuario.
+
+METRICAS UTEIS PARA ESTE PROJETO (evoluir sob demanda, nao construir tudo
+de uma vez sem necessidade real)
+8. Candidatas quando o projeto crescer: numero de eventos processados por
+   execucao, tempo total de geracao de relatorio, taxa de erro de
+   chamadas a API, ultima execucao bem-sucedida de cada job agendado.
+   Nao instrumentar tudo preventivamente — adicionar metrica quando uma
+   pergunta real precisar dela.
+
+ALERTAS SOBRE O PROPRIO SISTEMA
+9. Se um job agendado nao rodar no horario esperado (ex.: relatorio
+   semanal que deveria sair segunda de manha), isso e por si so um
+   problema a notificar — nao esperar o usuario perguntar "cade o
+   relatorio?".
+10. Qualquer alerta sobre o proprio sistema segue as mesmas regras de
+    prompts/tarefas/notificacoes.txt quanto a canal, formato e retry.

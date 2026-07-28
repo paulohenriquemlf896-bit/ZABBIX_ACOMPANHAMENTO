@@ -1,0 +1,60 @@
+TAREFA - BANCO DE DADOS
+========================================
+Regras de persistencia de dados proprios do projeto (o Zabbix continua
+sendo a fonte de monitoramento — ver prompts/tarefas/integracoes.txt).
+
+PRINCIPIO FUNDAMENTAL
+1. A FONTE DA VERDADE do monitoramento e o proprio Zabbix, via API. Este
+   projeto NUNCA acessa o banco MariaDB/PostgreSQL interno do Zabbix
+   diretamente — so a API JSON-RPC.
+2. So criar banco proprio quando houver necessidade real que a API nao
+   atende bem: (a) snapshots historicos alem da retencao do Zabbix;
+   (b) acelerar paineis evitando reconsultar a API a cada acesso;
+   (c) dados que o Zabbix nao tem (anotacoes, responsavel por problema,
+   plano de acao). Registrar a justificativa em um ADR novo em docs/adr/.
+
+MOTOR E ACESSO
+3. Motor padrao: SQLite, arquivo unico em /dados/acompanhamento.db (pasta
+   dentro da raiz, ao lado de src/). Justificativa: processo unico,
+   zero administracao, backup por copia de arquivo. So migrar para
+   MariaDB/PostgreSQL se surgir concorrencia real de escrita ou acesso
+   remoto multiplo — e com aprovacao do usuario (ver prompts/workflow/missao.txt).
+4. Acesso via modulo sqlite3 da stdlib, SEMPRE com parametros "?". NUNCA
+   montar SQL por concatenacao/f-string com dado externo (ver
+   prompts/politicas/seguranca.txt).
+5. Toda conexao usa context manager (with), PRAGMA foreign_keys=ON e
+   row_factory=sqlite3.Row.
+
+MODELAGEM
+6. Tabelas e colunas: snake_case, portugues sem acentos, singular
+   (evento, problema, host, snapshot_diario).
+7. Toda tabela tem id INTEGER PRIMARY KEY e criado_em TEXT (ISO 8601 UTC).
+   Timestamps unix do Zabbix sao convertidos na entrada, nunca guardados
+   crus junto com datas ISO na mesma tabela.
+8. Ids nativos do Zabbix (eventid, triggerid, hostid) guardados como TEXT,
+   com UNIQUE quando representarem a identidade do registro, usando
+   INSERT OR IGNORE para importacoes idempotentes.
+9. Relacionamentos com FOREIGN KEY explicita e ON DELETE definido
+   conscientemente (padrao RESTRICT; CASCADE so para tabela filha pura,
+   ex.: evento -> tag_do_evento).
+
+MIGRATIONS
+10. Esquema versionado por arquivos SQL numerados em /dados/migrations:
+    001_criacao_inicial.sql, 002_adiciona_tabela_x.sql, ...
+11. Tabela de controle esquema_versao(versao INTEGER, aplicado_em TEXT).
+    Um script aplicar_migrations.py aplica apenas as pendentes, em ordem,
+    dentro de transacao. NUNCA editar migration ja aplicada; criar a
+    proxima com a correcao.
+
+INDICES E CONSULTAS
+12. Indice para toda coluna usada em WHERE/JOIN/ORDER BY frequente
+    (ex.: evento(clock), evento(hostid)), nomeado idx_tabela_coluna.
+13. Consultas de relatorio pesadas testadas com EXPLAIN QUERY PLAN antes
+    de entregar; evitar SELECT * em codigo de producao.
+14. Escrita em lote sempre com executemany + uma unica transacao.
+
+INTEGRIDADE E BACKUP
+15. Validar dados na entrada (tipos, obrigatorios) ANTES do INSERT; o
+    banco e a ultima linha de defesa, nao a unica.
+16. O arquivo .db entra na rotina de backup do projeto e NUNCA e
+    versionado em git (.gitignore: *.db, /dados).

@@ -1,0 +1,49 @@
+WORKFLOW - RELEASE
+=================================
+Checklist para publicar/entregar uma versao do projeto (hoje: colocar um
+script novo em uso real ou agendado; no futuro: publicar o painel Flask).
+
+ANTES DE QUALQUER RELEASE, VERIFICAR
+1. Testes: suite existente passando (prompts/politicas/testes.txt); logica nova coberta.
+2. Documentacao: docs/README.md reflete o estado atual (inventario de
+   scripts, como configurar); docstrings corretas (prompts/politicas/documentacao.txt).
+3. CHANGELOG: entrada nova descrevendo o que mudou nesta release e por
+   que (prompts/politicas/documentacao.txt).
+4. Dependencias: requirements.txt atualizado e coerente com o que o
+   codigo realmente importa (prompts/politicas/dependencias.txt).
+5. Migracoes: se houver banco proprio, migrations pendentes aplicadas e
+   testadas (prompts/tarefas/banco_de_dados.txt).
+6. Seguranca: nenhuma credencial exposta; .env/variaveis de ambiente
+   configuradas no ambiente de destino; token do Zabbix usado tem
+   privilegio adequado (prompts/politicas/seguranca.txt).
+7. Versao: se o projeto adotar versionamento semantico (prompts/politicas/git.txt),
+   confirmar que a versao foi incrementada de forma coerente com o
+   impacto da mudanca.
+
+ESPECIFICO DESTE PROJETO
+8. Antes de agendar um script novo (Task Scheduler): rodar manualmente
+   pelo menos uma vez e confirmar saida esperada (prompts/politicas/monitoramento.txt
+   item 4).
+9. Antes de habilitar um canal de notificacao real (e-mail/Telegram/
+   Teams/WhatsApp) em producao: enviar um teste controlado e confirmar
+   com o usuario que o formato/destinatarios estao corretos
+   (prompts/tarefas/notificacoes.txt).
+10. Antes de aplicar qualquer mudanca de escrita no Zabbix em producao:
+    seguir o fluxo de confirmacao + antes/depois + idempotencia
+    (prompts/tarefas/backend.txt, prompts/politicas/seguranca.txt) — isso vale tambem como "release"
+    de uma mudanca de configuracao, nao so de codigo.
+
+DEPOIS DA RELEASE
+11. Confirmar que o resultado observado bate com o esperado (ex.: o
+    relatorio agendado realmente rodou e gerou arquivo em
+    /scripts/saidas, o e-mail realmente chegou).
+12. Se algo no roadmap (prompts/workflow/roadmap.txt) foi concluido nesta release,
+    mover para o CHANGELOG e remover/atualizar o roadmap.
+
+ROLLBACK
+13. Para mudanca de codigo: reverter para a versao anterior conhecida
+    boa (git revert, quando houver git — prompts/politicas/git.txt).
+14. Para mudanca de configuracao no Zabbix: como o script de aplicacao
+    registrou o valor ANTES (prompts/politicas/seguranca.txt item 6), o rollback e
+    reaplicar esse valor anterior — por isso esse registro nunca e
+    opcional.

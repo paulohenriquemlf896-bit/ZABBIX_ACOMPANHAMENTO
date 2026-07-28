@@ -1,0 +1,56 @@
+TAREFA - INTEGRACOES EXTERNAS
+==============================================
+Regras para cada sistema externo que este projeto conversa. Detalhes de
+autenticacao com o Zabbix ja cobertos em prompts/tarefas/backend.txt; retry/fila de
+notificacoes em prompts/tarefas/notificacoes.txt. Aqui: qual sistema, para que serve e
+limites de cada um.
+
+ZABBIX (integracao principal, hoje ativa)
+1. Endpoint: http://192.168.11.12/zabbix/api_jsonrpc.php (ver
+   contexto/infraestrutura.md e contexto/api.md para detalhes atualizados).
+2. Uso: leitura de eventos/problemas/hosts/templates para relatorios;
+   escrita pontual e controlada em macros/config (ex.: exclusao de ruido
+   de descoberta de servico).
+3. Metodos mais usados: apiinfo.version, event.get, host.get, trigger.get,
+   discoveryrule.get, template.get, usermacro.update, user.get.
+4. Limitacoes conhecidas: history.get exige o parametro "history" correto
+   por item; consultas sem "limit" em ambiente com muitos eventos podem
+   ser lentas ou pesadas — sempre limitar.
+
+GLPI (sistema irmao, ainda nao integrado neste projeto)
+5. O Grupo Rancho ja usa GLPI para inventario de ativos (ver memoria de
+   projeto externa; se uma integracao for decidida, registrar como ADR
+   novo em docs/adr/).
+   Cruzamento Zabbix x GLPI (hosts monitorados x ativos cadastrados) e uma
+   integracao candidata, nao implementada — ver contexto/fluxos.md quando
+   isso avancar.
+
+E-MAIL (SMTP) — planejado, nao implementado
+6. Uso previsto: envio periodico de relatorios (ex.: resumo semanal de
+   problemas recorrentes) e alertas pontuais.
+7. Credenciais SMTP via variavel de ambiente/.env (ver prompts/politicas/configuracao.txt
+   e prompts/politicas/seguranca.txt), nunca hardcoded.
+8. Regras de retry e formato de mensagem: ver prompts/tarefas/notificacoes.txt.
+
+TELEGRAM / TEAMS / WHATSAPP — planejados, nao implementados
+9. Quando alguma dessas integracoes for implementada, criar uma secao
+   propria neste arquivo (ou um arquivo dedicado, ex.:
+   06a_integracao_telegram.txt, se a complexidade justificar) descrevendo:
+   endpoint/biblioteca usada, formato de credencial, limite de taxa
+   (rate limit) do provedor, e formato de mensagem.
+10. Politica de retry, fila e tratamento de falha de qualquer canal de
+    notificacao: ver prompts/tarefas/notificacoes.txt (nao duplicar aqui).
+
+PROXMOX — relacionado a outros projetos do Grupo Rancho
+11. O servidor srvprojrancho (192.168.11.84) ja roda um relatorio de
+    backup Proxmox por cron, fora deste projeto. Se este projeto vier a
+    consumir dados do Proxmox (ex.: cruzar com saude de VMs no Zabbix),
+    documentar aqui e em contexto/integracoes.md antes de implementar.
+
+REGRA GERAL PARA QUALQUER INTEGRACAO NOVA
+12. Antes de integrar um sistema novo: (a) confirmar com o usuario que faz
+    sentido (prompts/workflow/missao.txt); (b) documentar endpoint, autenticacao e
+    limites em contexto/integracoes.md; (c) isolar o codigo de acesso num
+    modulo proprio (ex.: src/smtp_client.py), nunca espalhado pelos
+    scripts de relatorio; (d) aplicar prompts/politicas/seguranca.txt a qualquer
+    credencial nova.

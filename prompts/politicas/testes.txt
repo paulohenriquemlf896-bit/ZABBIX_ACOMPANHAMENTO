@@ -1,0 +1,58 @@
+POLITICA - TESTES
+================================
+Regras de qualidade e testes. Projeto de integracao com sistema externo
+(Zabbix) exige separar bem o que se testa offline do que se valida online.
+
+FERRAMENTAS
+1. Framework: unittest (stdlib) por padrao; pytest so se ja presente no
+   ambiente e com aprovacao (ver prompts/politicas/dependencias.txt). Testes em /src/tests,
+   arquivos test_*.py, rodaveis com:
+   python -m unittest discover src/tests
+
+O QUE TESTAR (por prioridade)
+2. PRIORIDADE MAXIMA - logica pura, testavel offline:
+   - agregacao/ranking de eventos (funcao agregar): contagem, ordenacao,
+     janelas de tempo, severidade maxima, hosts distintos;
+   - construcao/alteracao de regex de macro (funcao novo_valor):
+     acrescenta corretamente, e idempotente, preserva o valor original;
+   - formatacao (datas, percentuais, escape de HTML);
+   - montagem de payload JSON-RPC (metodo, params, headers, ausencia do
+     campo "auth").
+3. PRIORIDADE MEDIA - integracao simulada: respostas da API Zabbix
+   gravadas como JSON em /src/tests/fixtures (result normal, result vazio,
+   {"error": ...}, resposta truncada). Testar o comportamento do codigo
+   frente a cada uma SEM rede, com mock/monkeypatch da funcao de chamada.
+4. VALIDACAO ONLINE (nao e teste automatizado): chamadas reais de LEITURA
+   ao Zabbix para conferencia manual (ex.: validar_token.py). Scripts de
+   validacao online ficam nomeados validar_*.py e NUNCA entram na suite
+   automatizada.
+5. PROIBIDO: teste automatizado que faz ESCRITA no Zabbix real. Escrita so
+   se testa com mock. Validacao real de escrita e manual, com confirmacao
+   do usuario, mostrando antes/depois (ver prompts/tarefas/backend.txt e prompts/politicas/seguranca.txt).
+
+CASOS OBRIGATORIOS EM TODA FUNCAO DE AGREGACAO/RELATORIO
+6. Lista vazia de eventos; evento sem host associado; evento com clock
+   fora da janela; nome de problema com caracteres HTML (< > & ");
+   empate de contagem; atingimento do teto MAX_EVENTOS.
+
+COBERTURA E DISCIPLINA
+7. Meta: 80%+ da logica pura coberta. Codigo de I/O (urllib, escrita de
+   arquivo) pode ficar de fora da meta numerica, mas a logica que ele
+   envolve nao.
+8. Bug encontrado -> escrever teste que o reproduz ANTES de corrigir; o
+   teste fica como regressao permanente.
+9. Nenhuma entrega de funcionalidade nova sem seus testes na mesma tarefa.
+10. Refatoracao (ex.: extrair zbx_api.py) so com os testes existentes
+    passando antes e depois (ver prompts/workflow/refatoracao.txt).
+
+VALIDACAO DE DADOS DE ENTRADA
+11. Todo dado vindo da API e tratado como potencialmente ausente ou
+    malformado: usar .get() com default, converter tipos explicitamente
+    (int(ev["clock"])), nunca assumir que uma lista tem elementos.
+12. Argumentos de linha de comando (quando existirem) validados com
+    mensagem de uso clara em caso de erro.
+
+CRITERIOS DE APROVACAO
+13. Uma mudanca so e considerada pronta quando: testes novos + existentes
+    passam, a logica critica listada acima esta coberta, e o item de
+    testes do checklist (prompts/workflow/checklist.txt) foi verificado.

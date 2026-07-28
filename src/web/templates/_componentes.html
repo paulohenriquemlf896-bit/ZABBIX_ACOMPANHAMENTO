@@ -1,0 +1,11 @@
+<!-- Macros Jinja reutilizaveis entre telas do painel (ver
+     prompts/tarefas/frontend.txt item 16 — nunca copiar/colar HTML de
+     componente entre paginas). -->
+
+{% macro badge_severidade(nome, cor) %}
+<span class="badge" style="background:{{ cor }}">{{ nome }}</span>
+{% endmacro %}
+
+{% macro pill_severidade(nome, cor, n) %}
+<span class="pill" style="background:{{ cor }}">{{ nome }}: {{ n }}</span>
+{% endmacro %}

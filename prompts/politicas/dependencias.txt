@@ -1,0 +1,46 @@
+POLITICA - DEPENDENCIAS
+======================================
+Regras para instalar, atualizar, remover e versionar dependencias
+externas. Alinhado ao principio de simplicidade de prompts/workflow/missao.txt: a
+biblioteca padrao do Python e a primeira escolha sempre.
+
+QUANDO ADICIONAR UMA DEPENDENCIA NOVA
+1. So adicionar dependencia externa se: (a) a stdlib genuinamente nao
+   resolve ou resolveria com esforco desproporcional; (b) o ganho e real
+   e concreto para a tarefa atual, nao especulativo; (c) o usuario
+   aprovou explicitamente (ver prompts/workflow/missao.txt, criterios de confirmacao).
+2. Exemplos ja previstos que justificam dependencia quando chegarem:
+   Flask (painel web), waitress ou gunicorn (servidor de producao),
+   pytest (se preferido a unittest). Justificar cada uma quando adotada.
+3. Antes de propor uma dependencia, verificar se ela e mantida
+   ativamente, tem poucas dependencias transitivas, e vem de fonte
+   oficial (PyPI) — nome conferido letra a letra contra typosquatting
+   (ver prompts/politicas/seguranca.txt item 15).
+
+REGISTRO
+4. Toda dependencia aprovada entra em requirements.txt (raiz do
+   projeto) com versao fixada ou faixa minima clara (ex.: flask>=3.0,<4).
+5. requirements.txt so contem o que o projeto realmente importa —
+   nao adicionar "por via das duvidas".
+6. Ambiente de execucao documentado em docs/README.md: como criar venv e
+   instalar (python -m venv .venv / pip install -r requirements.txt).
+
+ATUALIZACAO
+7. Atualizar dependencia existente e uma acao deliberada, nao efeito
+   colateral de outra tarefa. Verificar changelog da lib para mudancas
+   que quebram compatibilidade antes de subir a versao.
+8. Atualizacao de dependencia por motivo de seguranca (CVE conhecida) tem
+   prioridade e deve ser comunicada ao usuario mesmo que nao pedida.
+
+REMOCAO
+9. Dependencia que deixou de ser usada e removida do requirements.txt na
+   mesma tarefa que remove o ultimo uso dela no codigo — nunca deixar
+   pendurada.
+
+COMPATIBILIDADE
+10. Toda dependencia nova deve ser compativel com Windows (ambiente
+    principal de execucao atual — ver contexto/infraestrutura.md) e,
+    idealmente, tambem com Linux, caso scripts venham a rodar em
+    srvprojrancho ou em outro servidor Linux do Grupo Rancho no futuro.
+11. Evitar dependencia que exija compilacao nativa complexa em Windows
+    sem necessidade forte — prefere-se sempre a opcao pip-install-and-go.

@@ -1,0 +1,65 @@
+WORKFLOW - CHECKLIST DE CONCLUSAO
+=================================================
+Checklist obrigatorio ao final de QUALQUER tarefa neste projeto. Nenhuma
+tarefa e considerada concluida sem passar por ele. Versao resumida deste
+checklist tambem vive em CLAUDE.md; esta e a versao completa e a que vale
+em caso de duvida.
+
+CODIGO
+[ ] 1. O codigo roda sem erro de sintaxe/import (validado manualmente ou
+       por execucao real quando possivel).
+[ ] 2. Nao existe duplicacao desnecessaria introduzida por esta tarefa
+       (ver prompts/politicas/arquitetura.txt, prompts/workflow/refatoracao.txt).
+[ ] 3. Tratamento de erro existe onde ha ponto de falha real (rede,
+       parsing, I/O) — nunca except silencioso (prompts/tarefas/backend.txt,
+       prompts/politicas/codigo.txt).
+[ ] 4. Estilo consistente com o resto do projeto: nomenclatura em
+       portugues sem acentos, prefixos de console padronizados, docstring
+       de modulo presente em script novo (prompts/politicas/regras_gerais.txt,
+       prompts/politicas/codigo.txt).
+[ ] 5. Nenhum print de debug, codigo morto ou TODO orfao ficou no codigo
+       entregue (prompts/politicas/codigo.txt item 15).
+
+LOGS E OBSERVABILIDADE
+[ ] 6. Logs adequados implementados quando aplicavel (prompts/politicas/logs.txt);
+       operacao de escrita em producao deixou rastro auditavel
+       (prompts/politicas/seguranca.txt item 14).
+
+DOCUMENTACAO
+[ ] 7. docs/README.md atualizado se um script foi criado ou teve
+       uso/parametros/saida alterados (prompts/politicas/documentacao.txt).
+[ ] 8. docs/CHANGELOG.md atualizado se algo relevante mudou, inclusive
+       mudanca de configuracao no Zabbix (prompts/politicas/documentacao.txt).
+[ ] 9. Um ADR novo criado em docs/adr/ se uma decisao arquitetural foi
+       tomada (prompts/politicas/arquitetura.txt).
+
+TESTES
+[ ] 10. Testes existentes continuam passando.
+[ ] 11. Logica nova/alterada tem teste cobrindo o caminho principal e os
+        casos de borda relevantes (prompts/politicas/testes.txt).
+
+SEGURANCA (nunca pular esta secao)
+[ ] 12. Nenhuma credencial, token ou segredo foi exposto em codigo, log,
+        commit ou documentacao (prompts/politicas/seguranca.txt).
+[ ] 13. Configuracao sensivel usa variavel de ambiente/.env, nao valor
+        hardcoded (prompts/politicas/configuracao.txt).
+[ ] 14. Toda entrada externa (API, formulario, argumento) foi tratada
+        como nao confiavel onde relevante (prompts/politicas/seguranca.txt item 8).
+[ ] 15. Se a tarefa envolveu ESCRITA em sistema de producao (Zabbix,
+        e-mail, notificacao), houve confirmacao explicita do usuario e
+        registro do estado antes/depois (prompts/workflow/missao.txt, prompts/tarefas/backend.txt).
+
+ARQUITETURA E CONSISTENCIA
+[ ] 16. A mudanca respeita a separacao de camadas de prompts/politicas/arquitetura.txt.
+[ ] 17. A mudanca respeita todos os prompts aplicaveis ao tema da tarefa
+        (consultar a tabela de CLAUDE.md se houver duvida sobre qual
+        prompt se aplica).
+[ ] 18. Se foi identificado um novo dominio de conhecimento sem prompt/
+        contexto correspondente, isso foi sinalizado ao usuario
+        (prompts/workflow/roadmap.txt item 9).
+
+ENTREGA
+[ ] 19. O resumo final para o usuario e claro sobre o que foi feito, o
+        que falta (se algo faltar) e qual e o proximo passo natural.
+[ ] 20. Nada foi feito alem do escopo pedido sem sinalizar antes
+        (prompts/workflow/missao.txt, prompts/workflow/refatoracao.txt item 2-3).

@@ -1,0 +1,69 @@
+<!-- TEMPLATE: relatorio/tela HTML autocontido, seguindo o esqueleto padrao
+     de prompts/tarefas/frontend.txt (titulo -> contexto -> resumo
+     executivo -> detalhe -> rodape metodologico).
+     Como usar: copiar a estrutura ao gerar um novo relatorio em Python
+     (ver scripts/relatorio_problemas.py como referencia real ja em
+     producao) ou ao criar um template Jinja2 em src/web/templates/.
+     Cores e tipografia: padroes/convencoes.md. Nunca CDN, tudo inline. -->
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>{{TITULO_DO_RELATORIO}}</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;color:#222;margin:24px;background:#f7f8fa}
+  h1{margin:0 0 4px} .sub{color:#666;margin-bottom:24px;font-size:14px}
+  section{background:#fff;border:1px solid #e3e6ea;border-radius:8px;padding:16px 20px;margin-bottom:22px}
+  h2{margin:0 0 10px;font-size:18px;border-bottom:2px solid #eee;padding-bottom:6px}
+  h2 small{color:#888;font-weight:normal;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid #eee;vertical-align:top}
+  th{background:#f0f2f5;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .badge{color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;white-space:nowrap}
+  .pill{color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:4px;display:inline-block}
+  .vazio{color:#888;font-style:italic}
+  tr:nth-child(even) td{background:#fafbfc}
+  @media print{body{background:#fff;margin:0} section{break-inside:avoid;border:none}}
+</style>
+</head>
+<body>
+
+<!-- a) titulo claro -->
+<h1>{{TITULO_DO_RELATORIO}}</h1>
+
+<!-- b) linha de contexto -->
+<div class="sub">{{ORIGEM_DOS_DADOS}} &middot; {{PERIODO}} &middot; gerado em {{DATA_HORA_GERACAO}}</div>
+
+<!-- c) resumo executivo (repetir uma <section> por bloco/janela) -->
+<section>
+  <h2>{{NOME_DA_SECAO}} <small>({{CONTEXTO_ADICIONAL}})</small></h2>
+
+  <div class="sevrow"><b>Total: {{TOTAL}}</b>
+    <span class="pill" style="background:#E45959">Desastre: {{N}}</span>
+    <span class="pill" style="background:#E97659">Alta: {{N}}</span>
+  </div>
+
+  <!-- d) detalhe -->
+  <table>
+    <thead>
+      <tr><th>#</th><th>{{COLUNA_PRINCIPAL}}</th><th>Ocorr.</th><th>%</th><th>Gravidade</th></tr>
+    </thead>
+    <tbody>
+      <!-- TEMPLATE: repetir <tr> por linha; usar <span class="vazio">…</span> quando nao houver dados -->
+      <tr>
+        <td>1</td>
+        <td>{{NOME}}</td>
+        <td class="num">{{QTD}}</td>
+        <td class="num">{{PCT}}%</td>
+        <td><span class="badge" style="background:#FFA059">Media</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- e) rodape com nota metodologica -->
+<div class="sub">{{NOTA_METODOLOGICA}}</div>
+
+</body>
+</html>

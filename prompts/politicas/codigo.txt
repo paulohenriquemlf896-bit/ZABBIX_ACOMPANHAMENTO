@@ -1,0 +1,69 @@
+POLITICA - ESTILO DE CODIGO PYTHON
+==================================================
+Regras de estilo, tipagem, docstrings e organizacao interna do codigo
+Python. Nomenclatura geral e organizacao de pastas ja cobertas em
+prompts/politicas/regras_gerais.txt — aqui e sobre a forma do codigo em si.
+
+VERSAO E DEPENDENCIAS
+1. Python 3.10+. Biblioteca padrao como primeira escolha (ver
+   prompts/politicas/dependencias.txt para quando uma externa se justifica).
+
+ESTILO
+2. Seguir PEP 8. Linhas ate ~100 colunas. f-strings para interpolacao de
+   string. pathlib ou os.path de forma consistente dentro do mesmo
+   arquivo (nao misturar os dois estilos no mesmo modulo).
+3. Funcoes curtas, uma responsabilidade cada. Se uma funcao precisa de um
+   comentario para dizer "primeiro faz X, depois Y, depois Z", ela
+   provavelmente deveria ser 3 funcoes.
+4. Constantes de configuracao em MAIUSCULAS no topo do arquivo (ver
+   prompts/politicas/configuracao.txt).
+5. Evitar aninhamento profundo (>3 niveis de indentacao); preferir
+   retorno antecipado (early return) a else encadeado.
+
+DOCSTRINGS
+6. Todo script executavel comeca com shebang + encoding + docstring de
+   modulo explicando: o que o script faz, como usar (comando de
+   exemplo), quais saidas gera, e dependencias (normalmente "so stdlib").
+   Padrao ja em uso nos scripts existentes — manter.
+7. Funcao publica/nao trivial ganha docstring de uma linha dizendo o que
+   ela retorna e nao o obvio do nome. Funcao pequena e auto-explicativa
+   pelo nome nao precisa de docstring.
+
+TIPAGEM
+8. Type hints em assinaturas de funcao quando aumentam clareza,
+   especialmente em funcoes de dominio (ex.: def agregar(eventos: list,
+   desde_ts: int) -> tuple[list, int, dict]). Nao e obrigatorio en todo
+   lugar (ex.: scripts CLI curtos podem preservar o estilo atual sem
+   hints), mas e o padrao preferido para codigo novo de dominio/servico.
+9. Nao usar Any como fuga de tipagem sem necessidade — se o tipo e
+   genuinamente variavel (ex.: resposta JSON crua da API), documentar a
+   forma esperada no comentario/docstring.
+
+COMENTARIOS
+10. Portugues, apenas onde a intencao nao e obvia pelo codigo: uma
+    constante estranha, um workaround para comportamento especifico da
+    API do Zabbix, uma decisao nao intuitiva. Nunca comentario que so
+    repete o que a linha ja diz.
+11. Nao deixar comentario de codigo removido ("# removido X"),
+    marcacao de autor/data no meio do codigo, ou comentario de tarefa
+    concluida — isso e para o CHANGELOG (prompts/politicas/documentacao.txt), nao para o
+    codigo-fonte.
+
+TRATAMENTO DE ERRO NO NIVEL DE CODIGO
+12. except especifico (ex.: except urllib.error.HTTPError), nunca
+    except Exception generico exceto na borda externa do programa
+    (ver prompts/tarefas/backend.txt) onde a intencao e converter qualquer falha em
+    mensagem amigavel — e mesmo ai, logar o detalhe tecnico.
+13. Nunca "except: pass". Toda excecao capturada e tratada ou relancada
+    com contexto adicional.
+
+FORMATACAO E LINT
+14. Se um formatador/linter (black, ruff, flake8) for adotado no futuro,
+    registrar a decisao em um ADR novo em docs/adr/ e em prompts/politicas/dependencias.txt;
+    ate la, seguir PEP 8 manualmente com consistencia ao codigo existente.
+
+CODIGO MORTO
+15. Nenhum print de debug, variavel nao usada, import nao usado ou bloco
+    comentado "por precaucao" fica no codigo entregue. Se algo pode ser
+    util depois, isso e trabalho para o roadmap (prompts/workflow/roadmap.txt), nao
+    codigo morto no repositorio.

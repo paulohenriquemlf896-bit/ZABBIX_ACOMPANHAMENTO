@@ -1,0 +1,48 @@
+POLITICA - GIT
+=============================
+Regras de versionamento. Este diretorio nao e um repositorio git hoje
+(estado registrado em AI_MEMORY.md). Este prompt vale a partir do
+momento em que o projeto for versionado.
+
+ANTES DE INICIALIZAR O REPOSITORIO
+1. Confirmar com o usuario antes de rodar "git init" (mudanca estrutural —
+   ver prompts/workflow/missao.txt, criterios de confirmacao).
+2. Antes do primeiro commit: garantir .gitignore completo (.env, *.db,
+   /dados, /scripts/saidas, /logs, __pycache__/) e revogar/trocar qualquer
+   token que hoje esteja hardcoded em script (ver prompts/politicas/seguranca.txt itens
+   2-3) — nao commitar historico com segredo.
+
+COMMITS
+3. Mensagens em portugues, no imperativo, curtas na primeira linha
+   (ate ~70 caracteres), com corpo explicando o "porque" quando nao for
+   obvio.
+4. Um commit = uma mudanca logica coesa. Nao misturar refatoracao com
+   funcionalidade nova no mesmo commit.
+5. Nunca commitar com --no-verify a menos que o usuario peca
+   explicitamente. Se um hook falhar, corrigir a causa.
+6. Nunca incluir em um commit: arquivos de /scripts/saidas, /logs, .env,
+   *.db — revisar "git status" antes de "git add" amplo.
+
+BRANCHES
+7. main/master sempre em estado que roda. Trabalho em andamento em branch
+   propria nomeada por tema (ex.: relatorio-por-host,
+   painel-flask-inicial).
+8. Nao fazer force-push em main sem pedido explicito do usuario.
+
+VERSIONAMENTO E RELEASES
+9. Versionamento semantico (MAJOR.MINOR.PATCH) quando o projeto tiver
+   releases formais (ver prompts/workflow/release.txt). Ate la, o CHANGELOG por data
+   (prompts/politicas/documentacao.txt) e suficiente.
+10. Tags de release (quando existirem) seguem vX.Y.Z e apontam para um
+    commit que passou pelo checklist de prompts/workflow/release.txt.
+
+PULL REQUESTS (quando houver mais de um colaborador/IA em paralelo)
+11. Descricao do PR explica o que mudou e por que, lista testes
+    realizados e referencia o item do CHANGELOG correspondente.
+12. Nao mesclar PR com testes quebrando ou checklist de prompts/workflow/checklist.txt
+    incompleto.
+
+AUTORIA E COLABORACAO COM IA
+13. Commits gerados com ajuda de IA seguem o padrao do projeto do usuario
+    para atribuicao de coautoria, quando aplicavel — nao inventar um
+    padrao novo sem confirmar.

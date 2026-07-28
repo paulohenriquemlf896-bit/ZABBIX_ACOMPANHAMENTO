@@ -1,0 +1,69 @@
+<!-- TEMPLATE: e-mail de notificacao/relatorio.
+     Como usar: copiar o miolo (dentro de <body>) para o script de envio
+     (ver prompts/tarefas/notificacoes.txt), substituir os placeholders
+     {{...}} e enviar como corpo HTML via smtplib (nao usar CSS externo —
+     clientes de e-mail nao carregam <link>, so inline/embutido).
+     Paleta e tipografia seguem padroes/convencoes.md. -->
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>{{ASSUNTO}}</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f8fa;font-family:Segoe UI,Arial,sans-serif;color:#222;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f8fa;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+               style="background:#ffffff;border:1px solid #e3e6ea;border-radius:8px;overflow:hidden;">
+          <tr>
+            <td style="padding:20px 24px;border-bottom:1px solid #eee;">
+              <h1 style="margin:0;font-size:20px;color:#222;">{{TITULO}}</h1>
+              <p style="margin:4px 0 0;font-size:13px;color:#666;">{{SUBTITULO_CONTEXTO}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 24px;">
+              <!-- TEMPLATE: resumo executivo -->
+              <p style="margin:0 0 12px;font-size:14px;">{{RESUMO}}</p>
+
+              <!-- TEMPLATE: pills de severidade, mesma paleta dos relatorios HTML -->
+              <div style="margin:0 0 16px;">
+                <span style="background:#E45959;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">Desastre: {{N_DESASTRE}}</span>
+                <span style="background:#E97659;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">Alta: {{N_ALTA}}</span>
+                <span style="background:#FFA059;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">Media: {{N_MEDIA}}</span>
+              </div>
+
+              <!-- TEMPLATE: tabela resumida (top 5, nunca o relatorio inteiro no corpo do e-mail) -->
+              <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#f0f2f5;text-align:left;">
+                    <th style="padding:6px 8px;">Problema</th>
+                    <th style="padding:6px 8px;text-align:right;">Ocorr.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- TEMPLATE: repetir por item -->
+                  <tr>
+                    <td style="padding:6px 8px;border-bottom:1px solid #eee;">{{NOME_PROBLEMA}}</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">{{QTD}}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <p style="margin:16px 0 0;font-size:13px;">
+                <a href="{{LINK_RELATORIO_COMPLETO}}" style="color:#2b6cb0;">Ver relatório completo</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 24px;background:#fafbfc;border-top:1px solid #eee;font-size:11px;color:#888;">
+              Gerado automaticamente em {{DATA_GERACAO}} — Acompanhamento Zabbix, Grupo Rancho.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

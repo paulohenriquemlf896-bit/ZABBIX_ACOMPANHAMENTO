@@ -1,0 +1,68 @@
+WORKFLOW - EVOLUCAO CONTINUA DO PROJETO
+==========================================
+Responsabilidade: revisar continuamente a organizacao, o codigo e a
+arquitetura do projeto, propondo melhorias antes de implementa-las
+(exceto quando o usuario ja forneceu a especificacao completa e aprovada
+— nesse caso, implementar e registrar). Subordinado a
+prompts/politicas/principios.txt e prompts/politicas/seguranca.txt.
+
+QUANDO RODAR ESTA REVISAO
+1. Ao final de qualquer tarefa nao trivial, antes do checklist final
+   (prompts/workflow/checklist.txt) — a revisao de evolucao acontece
+   ANTES do checklist, pois pode gerar ajustes que o checklist depois
+   valida.
+2. Sempre que o usuario pedir explicitamente uma revisao de qualidade ou
+   arquitetura.
+3. Nao e necessario rodar a lista inteira para uma mudanca trivial
+   (ex.: corrigir um texto de mensagem) — usar bom senso proporcional ao
+   tamanho da mudanca.
+
+PERGUNTAS OBRIGATORIAS DE AUTOAVALIACAO
+Antes de considerar uma tarefa nao trivial concluida, responder:
+
+1. Existe codigo duplicado que esta tarefa introduziu ou que ficou
+   evidente durante ela?
+2. Existe oportunidade de reutilizacao — algo que deveria ter usado um
+   template de /templates ou um padrao de /padroes em vez de ser escrito
+   do zero?
+3. Algum modulo tocado por esta tarefa pode ser simplificado sem perder
+   funcionalidade?
+4. Existe acoplamento desnecessario introduzido (ex.: uma funcao de
+   dominio que passou a depender de detalhe de rede ou de formato de
+   tela)?
+5. Alguma biblioteca ficou desnecessaria apos esta mudanca (import nao
+   usado, dependencia cujo unico uso foi removido)?
+6. Alguma funcao cresceu a ponto de merecer virar classe (estado
+   proprio, multiplos metodos relacionados)? Ver
+   prompts/politicas/arquitetura.txt sobre quando isso se justifica.
+7. Alguma classe existente cresceu a ponto de merecer ser dividida
+   (responsabilidades misturadas)?
+8. Algum arquivo/modulo esta grande demais para ser entendido de uma vez
+   (referencia pratica: acima de ~300-400 linhas em um script deste
+   projeto e sinal de alerta, nao regra rigida)?
+9. Alguma funcionalidade implementada nesta tarefa pode/deveria virar um
+   template reutilizavel em /templates para a proxima vez que um padrao
+   semelhante for necessario?
+
+COMO AGIR SOBRE O QUE FOR ENCONTRADO
+10. Achado pequeno e dentro do escopo da tarefa atual -> corrigir direto.
+11. Achado relevante mas fora do escopo da tarefa atual -> NAO
+    implementar sem avisar; propor ao usuario (registrar como candidato
+    de prompts/workflow/roadmap.txt se o usuario nao quiser tratar agora).
+12. Achado que representa risco (seguranca, perda de dados, quebra de
+    compatibilidade) -> alertar imediatamente, independente de estar no
+    escopo da tarefa (prompts/politicas/principios.txt).
+
+REGISTRO
+13. Melhorias estruturais aprovadas e aplicadas entram no
+    docs/CHANGELOG.md e, se forem decisao arquitetural, em um ADR novo
+    em docs/adr/ (ver prompts/politicas/documentacao.txt).
+14. Melhorias identificadas mas nao aplicadas agora entram em
+    prompts/workflow/roadmap.txt ou em AI_MEMORY.md (secao de dividas
+    tecnicas/pendencias), para nao se perderem.
+
+LIMITE DESTA REVISAO
+15. Esta revisao existe para manter a qualidade do que ja foi construido,
+    nao para justificar reescrever o projeto a cada tarefa. Simplicidade
+    (prompts/politicas/principios.txt) inclui saber quando "bom o
+    suficiente e estavel" e a resposta certa.

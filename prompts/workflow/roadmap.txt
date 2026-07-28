@@ -1,0 +1,47 @@
+WORKFLOW - ROADMAP
+=================================
+Como registrar e manter ideias futuras, backlog e prioridades. O roadmap
+em si (a lista viva de itens) fica em AI_MEMORY.md, secao "Ideias no
+roadmap" — este prompt define a REGRA de como mante-lo, nao o conteudo.
+AI_MEMORY.md e a fonte unica para esse tipo de estado (ver
+padroes/estrutura_pastas.md).
+
+QUANDO REGISTRAR UM ITEM DE ROADMAP
+1. Sempre que, durante uma tarefa, surgir uma ideia relevante que NAO faz
+   parte do escopo pedido, registrar em vez de implementar de surpresa
+   (alinhado a prompts/workflow/missao.txt e prompts/workflow/refatoracao.txt item 3).
+2. Exemplos ja identificados neste projeto que sao candidatos de roadmap:
+   ranking de problemas por host (em vez de por nome de problema);
+   agendamento do relatorio semanal com envio por e-mail; cruzamento
+   Zabbix x GLPI de inventario; limpeza das exclusoes manuais redundantes
+   de GoogleUpdater em hosts especificos; usuario Zabbix dedicado
+   read-only para os scripts.
+
+FORMATO DE UM ITEM
+3. Cada item de roadmap tem: titulo curto, uma frase de motivacao (por
+   que vale a pena), e prioridade percebida (alta/media/baixa) — sem
+   precisar de detalhamento tecnico completo ate o momento de
+   implementar.
+4. Nao e necessario estimar prazo; roadmap aqui e sobre "o que vale
+   considerar depois", nao um cronograma comprometido.
+
+CICLO DE VIDA DE UM ITEM
+5. Ideia surge -> registrada no roadmap.
+6. Usuario decide priorizar -> vira tarefa ativa (sai do roadmap "para
+   fazer" e entra em desenvolvimento).
+7. Implementado e entregue -> sai do roadmap (AI_MEMORY.md), entra no
+   CHANGELOG (prompts/politicas/documentacao.txt), e se gerou decisao de
+   design relevante, tambem vira um ADR novo em docs/adr/.
+8. Descartado (deixou de fazer sentido) -> remover do roadmap com uma
+   nota breve do motivo, para nao ser proposto de novo sem contexto.
+
+RESPONSABILIDADE DA IA
+9. Ao identificar um novo dominio de conhecimento ou categoria de regra
+   que nao se encaixa nos prompts/contexto atuais, sugerir a criacao de
+   um novo arquivo (prompts/<politicas|tarefas|workflow>/nome.txt,
+   contexto/nome.md, padroes/nome.md ou specs/nome.md, conforme o caso)
+   em vez de forcar o assunto em um arquivo existente (ver
+   prompts/workflow/evolucao.txt) — isso tambem e, no fundo, gestao de
+   roadmap da propria base de conhecimento do projeto.
+10. Nao remover item do roadmap silenciosamente; toda mudanca de status
+    de um item e visivel (ver item 8).

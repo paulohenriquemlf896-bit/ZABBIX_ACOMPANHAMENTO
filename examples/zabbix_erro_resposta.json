@@ -1,0 +1,10 @@
+{
+  "_comentario": "Exemplo de resposta de erro JSON-RPC do Zabbix — o campo 'data' e o que deve ser mostrado ao usuario (ver contexto/api.md, secao Estrutura de resposta padrao).",
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params.",
+    "data": "Session terminated, re-login, please."
+  },
+  "id": 1
+}

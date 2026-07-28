@@ -1,0 +1,57 @@
+TAREFA - BACKEND
+================================
+Regras para servicos, APIs, regras de negocio, autenticacao, erros e logs
+do lado servidor/integracao. Arquitetura das camadas esta em
+prompts/politicas/arquitetura.txt; regras de seguranca detalhadas em prompts/politicas/seguranca.txt;
+integracoes externas especificas em prompts/tarefas/integracoes.txt.
+
+SERVICOS E REGRAS DE NEGOCIO
+1. Regra de negocio (ex.: "recorrencia = numero de vezes que a trigger
+   entrou em PROBLEM no periodo") vive na camada de dominio, testavel sem
+   rede (ver prompts/politicas/arquitetura.txt e prompts/politicas/testes.txt).
+2. Toda consulta com potencial de retorno grande usa "limit" e teto
+   configuravel (padrao ja usado: MAX_EVENTOS), com aviso quando o teto
+   for atingido. Pedir so os campos necessarios em "output" (nunca
+   "extend" quando poucos campos bastam).
+3. Filtros (time_from, value, source, hostids) sempre aplicados na API,
+   nunca trazendo tudo para filtrar em Python.
+
+AUTENTICACAO COM O ZABBIX
+4. Autenticacao SEMPRE via header "Authorization: Bearer <token>" (padrao
+   Zabbix 7.x). NUNCA usar o campo "auth" no corpo da requisicao.
+5. Chamadas de LEITURA (metodo *.get) sao livres. Chamadas de ESCRITA
+   (*.create, *.update, *.delete, usermacro.update etc.) exigem
+   confirmacao explicita do usuario, impressao do estado ANTES/DEPOIS, e
+   devem ser idempotentes (rodar 2x nao duplica efeito).
+
+TRATAMENTO DE ERROS
+6. Nunca capturar excecao e silenciar. Toda falha gera mensagem clara com
+   prefixo [FALHA] no console (ou log estruturado em servico de longa
+   duracao — ver prompts/politicas/logs.txt) e exit code != 0 quando fatal.
+7. Diferenciar sempre 3 tipos de erro ao falar com a API: erro de conexao
+   (rede/timeout), erro HTTP (status != 200) e erro JSON-RPC (corpo com
+   "error"). Cada um com mensagem propria — nao amassar tudo num
+   "deu erro".
+8. history.get exige o parametro "history" com o tipo certo do item
+   (0 float, 1 char, 2 log, 3 uint, 4 text); descobrir via item.get
+   ("value_type") antes de consultar, nunca assumir.
+
+ARQUITETURA DO FUTURO PAINEL FLASK
+9. Estrutura minima quando for criado (dentro de /src):
+   src/web/app.py        -> criacao da app e rotas de pagina
+   src/web/api.py        -> endpoints JSON internos (/api/...)
+   src/web/services/     -> logica de negocio (chama zbx_api, agrega)
+   src/web/templates/    -> Jinja2
+   src/web/static/       -> css/js proprios (sem CDN)
+10. Rotas finas: rota chama service, service chama zbx_api. Nada de logica
+    de negocio na rota nem chamada HTTP no template.
+11. Resposta de API interna: JSON com {"ok": bool, "dados": ..., "erro": str|null}.
+12. Cache simples em memoria (dict com timestamp) para consultas repetidas
+    ao Zabbix; TTL padrao 60s; nunca cachear chamada de escrita.
+13. Servir em producao via waitress (Windows) ou gunicorn+systemd (Linux),
+    nunca o servidor de debug do Flask (ver prompts/politicas/configuracao.txt e
+    prompts/politicas/monitoramento.txt para health checks).
+
+DESEMPENHO (detalhe completo em prompts/politicas/performance.txt)
+14. Se um relatorio passar de ~30s, avaliar: reduzir janela, usar
+    trend.get em vez de history.get, paginar ou cachear.
