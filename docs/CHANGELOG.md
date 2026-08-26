@@ -5,6 +5,50 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-08-26 (3) — Exportação de relatório em Excel/PDF
+
+- **Pedido do usuário**: gerar relatório para download em Excel ou PDF,
+  escolhendo hosts e período; se "todos" os hosts, cada período vira
+  uma aba (no Excel). Spec escrita antes de implementar:
+  [`specs/exportacao_relatorio.md`](../specs/exportacao_relatorio.md).
+- **Duas dependências novas** (biblioteca padrão não gera `.xlsx` nem
+  PDF, ambas avaliadas: puro Python, sem compilação nativa no Windows —
+  `prompts/politicas/dependencias.txt`, item 11): `openpyxl` (Excel) e
+  `fpdf2` (PDF, instalado nesta tarefa).
+- **`filtrar_por_hosts()` criado** em `src/relatorios_service.py` —
+  filtra eventos já buscados pelos hosts selecionados (evento entra se
+  pelo menos um host afetado estiver na lista); reaproveita `agregar()`
+  já existente, não duplica lógica de agregação.
+- **`src/web/services/exportacao.py` criado**: `listar_hosts()` (todos
+  os hosts do Zabbix, para popular a tela de seleção) e
+  `dados_exportacao(periodos, hosts)` (um `buscar_eventos` +
+  `filtrar_por_hosts` + `agregar` por período selecionado). Sem cache —
+  mesma decisão já tomada para o histórico de ocorrências (exportação é
+  sob demanda, não a visão principal do painel).
+- **`src/web/exportar_excel.py`**: uma aba por período + aba "Resumo"
+  (hosts/períodos selecionados, data de geração), célula de gravidade
+  colorida com a paleta oficial do Zabbix.
+- **`src/web/exportar_pdf.py`**: documento único, uma seção por
+  período, mesma paleta de severidade, tabela com quebra de página
+  automática (biblioteca `fpdf2.table`).
+- **Rotas**: `GET /exportar` (formulário) e `POST /exportar` (gera e
+  devolve o arquivo via `Content-Disposition: attachment` — nada fica
+  salvo no servidor, diferente de `scripts/relatorio_problemas.py`).
+  Protegidas por login como o resto do painel. Link "Exportar
+  (Excel/PDF)" adicionado à navegação do painel.
+- **Ideias sugeridas mas não implementadas agora** (registradas no
+  roadmap, `AI_MEMORY.md`): filtro por severidade mínima; gráficos
+  embutidos no Excel/PDF; envio agendado por e-mail do relatório
+  exportado.
+- Testes novos: `src/tests/test_web_service_exportacao.py` (8 casos),
+  mais casos em `test_relatorios_service.py`
+  (`TestFiltrarPorHosts`, 5 casos) e `test_web_app.py` (rotas,
+  10 casos). Suite completa: **154 testes**, 100% offline. Validado
+  manualmente contra o Zabbix real: Excel com todos os hosts/todos os
+  períodos (4 abas, dados reais) e PDF filtrado só para "Siagri
+  Nutrane" (conferido que nenhuma linha de outro host aparece).
+- `docs/README.md`, `src/README.md` e `AI_MEMORY.md` atualizados.
+
 ## 2026-08-26 (2) — Painel sobe sozinho ao logar no Windows (tarefa agendada)
 
 - **Pedido do usuário**: não querer ter que abrir terminal e rodar o

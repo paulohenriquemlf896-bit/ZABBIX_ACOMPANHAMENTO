@@ -98,11 +98,25 @@ anteriores (o histórico de mudança de estado vive no
   Validado manualmente contra o Zabbix real em 2026-08-26 (fluxo
   completo: login inválido, login válido, rota protegida com e sem
   sessão, `/health` aberto, logout).
+- **Exportação de relatório (Excel/PDF)** — `GET /exportar` (formulário:
+  hosts, períodos, formato) e `POST /exportar` (gera e devolve o
+  arquivo, nada fica salvo no servidor). Excel via `openpyxl` (uma aba
+  por período, mais aba "Resumo"); PDF via `fpdf2` (documento único,
+  uma seção por período) — ambas dependências novas, puro Python, sem
+  compilação nativa. Filtro por host reaproveita `agregar()` já
+  existente, só filtrando os eventos antes (`filtrar_por_hosts()`, novo
+  em `src/relatorios_service.py`). Decisão e justificativa das
+  dependências em `specs/exportacao_relatorio.md`. Testes:
+  `src/tests/test_web_service_exportacao.py` + casos novos em
+  `test_relatorios_service.py` e `test_web_app.py`. Suite completa:
+  154 testes. Validado manualmente contra o Zabbix real em 2026-08-26
+  (Excel com todos os hosts/períodos, PDF filtrado por host — conferido
+  que o filtro realmente restringe os dados).
 
 ## Funcionalidades em andamento
 
-- Nenhuma no momento (última tarefa concluída: autenticação do painel
-  por usuário individual, 2026-08-26).
+- Nenhuma no momento (última tarefa concluída: exportação de relatório
+  em Excel/PDF, 2026-08-26).
 
 ## Funcionalidades futuras (planejadas, com spec já escrita)
 
@@ -119,6 +133,12 @@ anteriores (o histórico de mudança de estado vive no
 
 Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
 
+- Ideias sugeridas junto com a exportação Excel/PDF (2026-08-26), não
+  implementadas ainda: filtro por severidade mínima na exportação
+  (reduzir ruído em relatório para gestão); gráficos embutidos no
+  Excel/PDF (o painel web já mostra gráficos, exportação hoje é só
+  tabular); envio agendado do relatório exportado por e-mail (depende
+  de `specs/notificacoes.md`, ainda não retomado).
 - Cruzamento Zabbix x GLPI (hosts monitorados sem ativo cadastrado e
   vice-versa).
 - Ajuste de `StartPollersUnreachable` no `zabbix_server.conf` (fora do

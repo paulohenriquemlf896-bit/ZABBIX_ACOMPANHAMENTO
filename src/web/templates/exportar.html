@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block titulo %}Exportar relatório — Acompanhamento Zabbix{% endblock %}
+{% block subtitulo %}Escolha hosts, períodos e o formato do arquivo{% endblock %}
+
+{% block conteudo %}
+<p><a href="{{ url_for('pagina_relatorios') }}">&larr; voltar ao painel</a></p>
+
+{% if erro %}
+<section><p class="vazio" style="color:#E45959">{{ erro }}</p></section>
+{% endif %}
+
+<section>
+<form method="post" action="{{ url_for('gerar_exportacao') }}">
+
+  <h2>Formato</h2>
+  <p>
+    <label><input type="radio" name="formato" value="excel" checked> Excel (.xlsx — uma aba por período)</label><br>
+    <label><input type="radio" name="formato" value="pdf"> PDF (documento único)</label>
+  </p>
+
+  <h2>Períodos</h2>
+  <p class="sub" style="margin:0 0 8px">
+    <a href="#" onclick="marcarTodos('periodos'); return false;">selecionar todos</a> &middot;
+    <a href="#" onclick="desmarcarTodos('periodos'); return false;">limpar</a>
+  </p>
+  <p>
+    {% for p in periodos %}
+      <label style="display:inline-block;margin-right:16px">
+        <input type="checkbox" name="periodos" value="{{ p }}" class="chk-periodos"
+               {{ "checked" if p in ("hoje", "7d") else "" }}>
+        {{ titulos_periodo[p] }}
+      </label>
+    {% endfor %}
+  </p>
+
+  <h2>Hosts</h2>
+  <p class="sub" style="margin:0 0 8px">
+    <a href="#" onclick="marcarTodos('hosts'); return false;">selecionar todos</a> &middot;
+    <a href="#" onclick="desmarcarTodos('hosts'); return false;">limpar (= todos, sem filtro)</a>
+  </p>
+  {% if not hosts %}
+    <p class="vazio">Nenhum host disponível (falha ao consultar o Zabbix).</p>
+  {% else %}
+  <div style="max-height:260px;overflow-y:auto;border:1px solid #e3e6ea;border-radius:6px;padding:10px 14px">
+    {% for h in hosts %}
+      <label style="display:block;padding:3px 0">
+        <input type="checkbox" name="hosts" value="{{ h }}" class="chk-hosts">
+        {{ h }}
+      </label>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p class="sub">Nenhum host marcado = todos os hosts (sem filtro).</p>
+
+  <button type="submit"
+          style="padding:10px 20px;background:#2b6cb0;color:#fff;border:none;border-radius:6px;
+                 cursor:pointer;font-size:14px;margin-top:8px">
+    Gerar e baixar
+  </button>
+</form>
+</section>
+
+<script>
+function marcarTodos(grupo) {
+  document.querySelectorAll('.chk-' + grupo).forEach(function (el) { el.checked = true; });
+}
+function desmarcarTodos(grupo) {
+  document.querySelectorAll('.chk-' + grupo).forEach(function (el) { el.checked = false; });
+}
+</script>
+{% endblock %}

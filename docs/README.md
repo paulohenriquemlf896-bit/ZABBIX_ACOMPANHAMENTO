@@ -144,6 +144,16 @@ começou, quando terminou e quanto durou, com gráfico de frequência por
 dia (ver [`specs/historico_ocorrencias.md`](../specs/historico_ocorrencias.md)).
 Endpoint JSON equivalente: `GET /api/relatorios/historico?periodo=...&visao=...&chave=...`.
 
+### Exportar relatório (Excel/PDF)
+
+Link "Exportar (Excel/PDF)" no painel, ou direto em `GET /exportar`.
+Escolha hosts (ou deixe todos desmarcados = todos os hosts), períodos, e
+o formato — `POST /exportar` devolve o arquivo para download, gerado na
+hora (nada fica salvo no servidor). Excel (`openpyxl`) sai com **uma
+aba por período**; PDF (`fpdf2`) sai como documento único, **uma seção
+por período**. Ver
+[`specs/exportacao_relatorio.md`](../specs/exportacao_relatorio.md).
+
 ## Inventário de scripts (`/scripts`)
 
 Utilitários pontuais — relatórios, inspeção e correções de configuração.

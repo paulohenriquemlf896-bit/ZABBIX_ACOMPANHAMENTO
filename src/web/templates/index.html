@@ -16,6 +16,7 @@
     <a href="{{ url_for('pagina_relatorios', periodo=periodo_atual, visao=v) }}"
        class="{{ 'ativo' if v == visao_atual else '' }}">{{ titulos_visao[v] }}</a>
   {% endfor %}
+  <a href="{{ url_for('pagina_exportar') }}" style="margin-left:12px">Exportar (Excel/PDF)</a>
 </nav>
 
 {% if erro %}

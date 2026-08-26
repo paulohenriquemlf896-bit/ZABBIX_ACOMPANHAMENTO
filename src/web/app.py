@@ -41,10 +41,12 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from flask import Flask, redirect, render_template, request, session, url_for  # noqa: E402
+from flask import Flask, Response, redirect, render_template, request, session, url_for  # noqa: E402
 
 from api import bp_api  # noqa: E402
 from auth import login_required, verificar_credenciais  # noqa: E402
+from exportar_excel import gerar_excel  # noqa: E402
+from exportar_pdf import gerar_pdf  # noqa: E402
 from logging_util import configurar_logging  # noqa: E402
 from relatorios_service import (  # noqa: E402
     PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts, fmt_duracao,
@@ -52,6 +54,7 @@ from relatorios_service import (  # noqa: E402
 from services.relatorios import (  # noqa: E402
     dados_periodo, historico_grupo, TTL_SEGUNDOS, VISOES, CHAVE_MAX_CARACTERES,
 )
+from services.exportacao import listar_hosts, dados_exportacao  # noqa: E402
 from zbx_api import call  # noqa: E402
 
 # =========================================================================
@@ -63,6 +66,7 @@ PAINEL_SECRET_KEY = os.environ.get("PAINEL_SECRET_KEY", "")
 TOP_N = 20            # quantas linhas a tabela mostra
 TOP_N_GRAFICO = 10    # quantas barras o grafico de ranking mostra (ver specs/ranking_por_host.md)
 LIMIAR_LENTIDAO_SEGUNDOS = 5  # acima disso, loga WARNING (prompts/politicas/monitoramento.txt, item 7)
+FORMATOS_EXPORTACAO = ("excel", "pdf")  # whitelist (ver specs/exportacao_relatorio.md)
 # =========================================================================
 
 TITULOS_VISAO = {"problema": "Por problema", "host": "Por host"}
@@ -247,6 +251,68 @@ def pagina_historico():
     contexto["grafico_dias"] = montar_grafico_dias(itens)
     contexto["resumo"] = resumo_historico(itens)
     return render_template("historico.html", **contexto)
+
+
+@app.route("/exportar", methods=["GET"])
+@login_required
+def pagina_exportar():
+    """Formulario de exportacao (hosts/periodos/formato) — ver
+    specs/exportacao_relatorio.md."""
+    try:
+        hosts_disponiveis = listar_hosts()
+    except RuntimeError as e:
+        log.warning("Falha ao listar hosts para exportacao: %s", e)
+        return render_template("exportar.html", hosts=[], periodos=PERIODOS,
+                                titulos_periodo=TITULOS_PERIODO, erro=str(e))
+    return render_template("exportar.html", hosts=hosts_disponiveis, periodos=PERIODOS,
+                            titulos_periodo=TITULOS_PERIODO, erro=None)
+
+
+@app.route("/exportar", methods=["POST"])
+@login_required
+def gerar_exportacao():
+    periodos = [p for p in request.form.getlist("periodos") if p in PERIODOS]
+    hosts = request.form.getlist("hosts") or None
+    formato = request.form.get("formato", "excel")
+    if formato not in FORMATOS_EXPORTACAO:
+        formato = "excel"
+
+    if not periodos:
+        return _pagina_exportar_com_erro("Selecione pelo menos um periodo.")
+
+    inicio = time.monotonic()
+    try:
+        dados = dados_exportacao(periodos, hosts)
+    except RuntimeError as e:
+        log.warning("Falha ao gerar exportacao (periodos=%s, hosts=%s): %s", periodos, hosts, e)
+        return _pagina_exportar_com_erro(str(e))
+    duracao = time.monotonic() - inicio
+    if duracao > LIMIAR_LENTIDAO_SEGUNDOS:
+        log.warning("Exportacao lenta: periodos=%s hosts=%s levou %.1fs", periodos, hosts, duracao)
+
+    gerado_em = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    timbre = datetime.now().strftime("%Y%m%d_%H%M")
+    if formato == "pdf":
+        conteudo = gerar_pdf(dados, hosts, gerado_em)
+        nome_arquivo = f"relatorio_problemas_{timbre}.pdf"
+        mimetype = "application/pdf"
+    else:
+        conteudo = gerar_excel(dados, hosts, gerado_em)
+        nome_arquivo = f"relatorio_problemas_{timbre}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    log.info("Exportacao gerada: formato=%s periodos=%s hosts=%s", formato, periodos, hosts or "todos")
+    return Response(conteudo, mimetype=mimetype,
+                     headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'})
+
+
+def _pagina_exportar_com_erro(mensagem):
+    try:
+        hosts_disponiveis = listar_hosts()
+    except RuntimeError:
+        hosts_disponiveis = []
+    return render_template("exportar.html", hosts=hosts_disponiveis, periodos=PERIODOS,
+                            titulos_periodo=TITULOS_PERIODO, erro=mensagem)
 
 
 @app.route("/login", methods=["GET", "POST"])

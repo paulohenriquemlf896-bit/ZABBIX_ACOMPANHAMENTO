@@ -25,12 +25,17 @@ src/
 │   ├── app.py               specs/dashboard.md)
 │   ├── api.py
 │   ├── auth.py                — login/sessao (ver docs/adr/006)
-│   ├── services/relatorios.py  — cache de 60s sobre relatorios_service.py
+│   ├── exportar_excel.py       — gera .xlsx (ver specs/exportacao_relatorio.md)
+│   ├── exportar_pdf.py          — gera .pdf (idem)
+│   ├── services/
+│   │   ├── relatorios.py         — cache de 60s sobre relatorios_service.py
+│   │   └── exportacao.py          — sem cache (sob demanda)
 │   └── templates/
 └── tests/
     ├── test_zbx_api.py
     ├── test_relatorios_service.py
     ├── test_web_service_relatorios.py
+    ├── test_web_service_exportacao.py
     ├── test_web_app.py
     ├── test_relatorio_problemas_apresentacao.py
     ├── test_aplicar_exclusao_googleupdater.py

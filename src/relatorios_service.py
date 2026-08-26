@@ -102,6 +102,20 @@ def buscar_eventos(desde_ts, token, limite=None):
     return r.get("result", []), None
 
 
+def filtrar_por_hosts(eventos: list[dict], hosts: set[str] | None) -> list[dict]:
+    """Filtra eventos pelos hosts informados (por nome do host).
+
+    `hosts` None ou vazio significa nao filtrar (todos os hosts — ver
+    specs/exportacao_relatorio.md). Um evento entra se PELO MENOS UM dos
+    hosts que ele afeta estiver em `hosts` (mesma semantica de "afeta o
+    host", nao "afeta so o host").
+    """
+    if not hosts:
+        return eventos
+    return [ev for ev in eventos
+            if any(h.get("name") in hosts for h in ev.get("hosts", []))]
+
+
 def agregar(eventos, desde_ts):
     """Agrupa por nome do problema, contando ocorrencias no periodo (>= desde_ts).
 

@@ -338,6 +338,104 @@ class TestApiRelatoriosHistorico(unittest.TestCase):
         self.assertFalse(body["ok"])
 
 
+class TestPaginaExportar(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+        _autenticar(self.client)
+
+    @patch("app.listar_hosts")
+    def test_pagina_lista_hosts(self, mock_listar):
+        mock_listar.return_value = ["Host A", "Host B"]
+        resp = self.client.get("/exportar")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Host A", resp.data)
+
+    @patch("app.listar_hosts")
+    def test_falha_ao_listar_hosts_mostra_erro_amigavel(self, mock_listar):
+        mock_listar.side_effect = RuntimeError("Conexao: timed out")
+        resp = self.client.get("/exportar")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Conexao: timed out", resp.data)
+
+
+class TestGerarExportacao(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+        _autenticar(self.client)
+        self.dados_exemplo = {"hoje": {"titulo": "Hoje", "ranking": [], "total": 0, "por_severidade": {}}}
+
+    @patch("app.listar_hosts")
+    def test_sem_periodos_volta_com_erro(self, mock_listar):
+        mock_listar.return_value = []
+        resp = self.client.post("/exportar", data={"formato": "excel"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Selecione pelo menos um periodo", resp.data)
+
+    @patch("app.dados_exportacao")
+    def test_excel_devolve_arquivo_para_download(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        resp = self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "excel"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.mimetype, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.assertIn("attachment", resp.headers["Content-Disposition"])
+
+    @patch("app.dados_exportacao")
+    def test_pdf_devolve_arquivo_para_download(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        resp = self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "pdf"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.mimetype, "application/pdf")
+
+    @patch("app.dados_exportacao")
+    def test_hosts_selecionados_sao_repassados(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        self.client.post("/exportar", data={"periodos": ["hoje"], "hosts": ["Host A", "Host B"], "formato": "excel"})
+        mock_dados.assert_called_once_with(["hoje"], ["Host A", "Host B"])
+
+    @patch("app.dados_exportacao")
+    def test_sem_hosts_selecionados_passa_none(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "excel"})
+        mock_dados.assert_called_once_with(["hoje"], None)
+
+    @patch("app.listar_hosts")
+    @patch("app.dados_exportacao")
+    def test_erro_de_comunicacao_volta_ao_formulario_com_mensagem(self, mock_dados, mock_listar):
+        mock_dados.side_effect = RuntimeError("Conexao: timed out")
+        mock_listar.return_value = []
+        resp = self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "excel"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Conexao: timed out", resp.data)
+
+    @patch("app.dados_exportacao")
+    def test_formato_invalido_cai_no_default_excel(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        resp = self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "departamento"})
+        self.assertEqual(resp.mimetype, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    @patch("app.dados_exportacao")
+    def test_periodo_invalido_e_filtrado_silenciosamente(self, mock_dados):
+        mock_dados.return_value = self.dados_exemplo
+        self.client.post("/exportar", data={"periodos": ["hoje", "2anos"], "formato": "excel"})
+        mock_dados.assert_called_once_with(["hoje"], None)
+
+
+class TestProtecaoExportar(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+
+    def test_get_sem_sessao_redireciona(self):
+        resp = self.client.get("/exportar")
+        self.assertEqual(resp.status_code, 302)
+
+    def test_post_sem_sessao_redireciona(self):
+        resp = self.client.post("/exportar", data={"periodos": ["hoje"], "formato": "excel"})
+        self.assertEqual(resp.status_code, 302)
+
+
 class TestLogin(unittest.TestCase):
 
     def setUp(self):

@@ -22,6 +22,37 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import relatorios_service as rs  # noqa: E402 — import apos sys.path
 
 
+class TestFiltrarPorHosts(unittest.TestCase):
+    """Ver specs/exportacao_relatorio.md."""
+
+    def test_hosts_none_nao_filtra(self):
+        eventos = [{"name": "X", "hosts": [{"name": "Host A"}]}]
+        self.assertEqual(rs.filtrar_por_hosts(eventos, None), eventos)
+
+    def test_hosts_vazio_nao_filtra(self):
+        eventos = [{"name": "X", "hosts": [{"name": "Host A"}]}]
+        self.assertEqual(rs.filtrar_por_hosts(eventos, set()), eventos)
+
+    def test_filtra_eventos_de_hosts_nao_selecionados(self):
+        eventos = [
+            {"name": "X", "hosts": [{"name": "Host A"}]},
+            {"name": "Y", "hosts": [{"name": "Host B"}]},
+        ]
+        r = rs.filtrar_por_hosts(eventos, {"Host A"})
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["name"], "X")
+
+    def test_evento_com_qualquer_host_selecionado_entra(self):
+        eventos = [{"name": "X", "hosts": [{"name": "Host A"}, {"name": "Host B"}]}]
+        r = rs.filtrar_por_hosts(eventos, {"Host B"})
+        self.assertEqual(len(r), 1)
+
+    def test_evento_sem_host_nunca_entra_com_filtro_ativo(self):
+        eventos = [{"name": "X", "hosts": []}]
+        r = rs.filtrar_por_hosts(eventos, {"Host A"})
+        self.assertEqual(r, [])
+
+
 class TestAgregar(unittest.TestCase):
 
     def test_lista_vazia_retorna_ranking_vazio(self):
