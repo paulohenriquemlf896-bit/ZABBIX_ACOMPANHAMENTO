@@ -70,8 +70,10 @@ TITULOS_VISAO = {"problema": "Por problema", "host": "Por host"}
 log = configurar_logging("painel_web")
 
 if not PAINEL_SECRET_KEY:
-    print("[FALHA] PAINEL_SECRET_KEY nao definida. Defina essa variavel de ambiente "
-          "(qualquer texto longo e aleatorio) antes de subir o painel — ver .env.example.")
+    mensagem = ("PAINEL_SECRET_KEY nao definida. Defina essa variavel de ambiente "
+                "(qualquer texto longo e aleatorio) antes de subir o painel — ver .env.example.")
+    print(f"[FALHA] {mensagem}")
+    log.error(mensagem)  # tambem vai pro arquivo — util quando o painel roda sem console (ex.: tarefa agendada)
     sys.exit(1)
 
 app = Flask(__name__)

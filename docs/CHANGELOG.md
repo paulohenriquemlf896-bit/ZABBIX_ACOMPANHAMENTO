@@ -5,6 +5,32 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-08-26 (2) — Painel sobe sozinho ao logar no Windows (tarefa agendada)
+
+- **Pedido do usuário**: não querer ter que abrir terminal e rodar o
+  painel manualmente toda vez que liga o PC.
+- **`scripts/iniciar_painel.ps1` criado**: carrega o `.env` e sobe o
+  painel via `pythonw.exe` (sem janela de console). Testado
+  manualmente antes de instruir o registro da tarefa.
+- **Correção pequena em `src/web/app.py`**: a falha de
+  `PAINEL_SECRET_KEY` ausente só ia para `print()`, que não aparece em
+  nada quando o processo roda sem console (exatamente o caso de uma
+  tarefa agendada). Agora também vai para `log.error()` — confirmado
+  útil na prática: foi assim que descobri, ao testar o script pela
+  primeira vez, que a `.env` real do usuário ainda não tinha
+  `PAINEL_SECRET_KEY` preenchida (só existia no `.env.example`).
+- **`PAINEL_SECRET_KEY` gerada e salva no `.env` real** (valor
+  aleatório local, não é credencial de sistema externo).
+- **Instruções passadas ao usuário** (não registradas por mim — pedido
+  explícito de ser instruído, não de eu executar) para criar a tarefa
+  agendada via `Register-ScheduledTask` (gatilho "ao logar", até 3
+  tentativas de reinício automático se cair). Usuário registrou e
+  testou (`Start-ScheduledTask` + `GET /health`) com sucesso.
+- Documentado em `docs/README.md` (seção "Rodar o painel ao ligar o
+  PC") e `AI_MEMORY.md`. **Não é** o deploy definitivo (serviço
+  Linux/systemd) — isso continua sendo fase futura, no servidor
+  definitivo, por decisão já registrada do usuário.
+
 ## 2026-08-26 (1) — Autenticação do painel por usuário individual
 
 - **Pedido do usuário**: o painel passou a ser acessado por outra pessoa

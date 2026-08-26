@@ -119,6 +119,25 @@ o Zabbix, tentativa de login inválida, consultas lentas > 5s — ver
 Para revogar o acesso de alguém sem apagar o histórico:
 `python scripts/desativar_usuario.py <nome_usuario>`.
 
+### Rodar o painel ao ligar o PC (Windows)
+
+`scripts/iniciar_painel.ps1` carrega o `.env` e sobe o painel via
+`pythonw.exe` (sem janela de console) — é o que a tarefa agendada abaixo
+chama. Registrar uma vez, no PowerShell (não precisa ser Administrador):
+
+```powershell
+$acao = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-WindowStyle Hidden -ExecutionPolicy Bypass -File "CAMINHO_DO_PROJETO\scripts\iniciar_painel.ps1"'
+$gatilho = New-ScheduledTaskTrigger -AtLogOn
+$config = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
+Register-ScheduledTask -TaskName "PainelAcompanhamentoZabbix" -Action $acao -Trigger $gatilho -Settings $config -Description "Sobe o painel web do Acompanhamento Zabbix ao logar no Windows"
+```
+
+Dispara "ao logar" (não no boot puro, que exigiria tarefa rodando como
+SYSTEM); se o processo cair, tenta subir de novo sozinho (até 3 vezes).
+Testar sem reiniciar: `Start-ScheduledTask -TaskName "PainelAcompanhamentoZabbix"`.
+Desativar: `Disable-ScheduledTask -TaskName "PainelAcompanhamentoZabbix"`.
+Remover: `Unregister-ScheduledTask -TaskName "PainelAcompanhamentoZabbix" -Confirm:$false`.
+
 Cada linha do ranking é clicável e leva a `GET /historico?periodo=...&visao=...&chave=...`
 — histórico de ocorrências daquele problema/host: quando cada uma
 começou, quando terminou e quanto durou, com gráfico de frequência por

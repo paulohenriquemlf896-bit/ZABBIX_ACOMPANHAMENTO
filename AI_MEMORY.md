@@ -193,7 +193,11 @@ Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
 
 ## Limitações atuais
 
-- Nenhuma automação agendada ainda — todos os scripts rodam manualmente.
+- Scripts de relatório continuam manuais. O painel web, desde
+  2026-08-26, pode subir sozinho ao logar no Windows (tarefa agendada
+  registrada pelo usuário via `scripts/iniciar_painel.ps1` — ver
+  `docs/README.md`, seção "Rodar o painel ao ligar o PC"); não é um
+  serviço Linux/systemd (isso é fase futura, no servidor definitivo).
 - Nenhuma integração além do Zabbix está implementada (GLPI, e-mail,
   Telegram, Teams, WhatsApp, Proxmox — todas planejadas, ver
   `contexto/integracoes.md`).
