@@ -73,27 +73,51 @@ visão (`?visao=problema|host` — ranking por nome do problema ou por host
 afetado, ver [`specs/ranking_por_host.md`](../specs/ranking_por_host.md)),
 cache de 60s, e auto-atualização periódica (meta refresh, mesmo
 intervalo do cache). Cada visão tem um gráfico de barras (ranking) e uma
-barra de mix de severidade, além da tabela detalhada. Escopo inicial
-(sem autenticação, sem escrita no Zabbix) definido em
+barra de mix de severidade, além da tabela detalhada. Exige login
+(usuário individual — ver
+[`specs/autenticacao_painel.md`](../specs/autenticacao_painel.md) e
+[`docs/adr/006-autenticacao-usuarios-individuais.md`](adr/006-autenticacao-usuarios-individuais.md)).
+Escopo inicial (sem escrita no Zabbix) definido em
 [`specs/dashboard.md`](../specs/dashboard.md); decisão arquitetural em
 [`docs/adr/005-painel-web-flask.md`](adr/005-painel-web-flask.md).
 
+**Primeira vez** (cria o banco e o seu usuário — só precisa uma vez):
+
 ```bash
 pip install -r requirements.txt
+python scripts/aplicar_migrations.py
+python scripts/criar_usuario.py SEU_NOME
+```
+
+**Rodar o painel:**
+
+```bash
 export ZBX_URL="http://192.168.11.12/zabbix/api_jsonrpc.php"
 export ZBX_TOKEN="SEU_TOKEN_AQUI"
+export PAINEL_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python src/web/app.py
 ```
 
+`PAINEL_SECRET_KEY` é **obrigatória** (assina o cookie de sessão do
+login) — sem ela o painel recusa subir com mensagem clara. Gere um valor
+uma vez e guarde no `.env` (ver [`.env.example`](../.env.example)); não
+precisa mudar a cada execução.
+
 Sobe em `http://127.0.0.1:8080` via `waitress` (nunca o servidor de debug
 do Flask — ver `prompts/tarefas/backend.txt`, item 13). Ajustável com as
-variáveis `PAINEL_HOST`/`PAINEL_PORT`. Rota `GET /health` expõe status de
-conectividade com o Zabbix; rota `GET /api/relatorios/dados?periodo=...`
-expõe os mesmos dados em JSON (`padroes/padrao_respostas_api.md`). Logs
+variáveis `PAINEL_HOST`/`PAINEL_PORT`. Rota `GET /health` continua sem
+exigir login (uso por ferramentas de monitoramento externas) e expõe
+status de conectividade com o Zabbix; rota
+`GET /api/relatorios/dados?periodo=...` expõe os mesmos dados em JSON
+(`padroes/padrao_respostas_api.md`), exige sessão (401 sem login). Logs
 estruturados em `logs/painel_web.log` (início, falha de comunicação com
-o Zabbix, consultas lentas > 5s — ver `src/logging_util.py` e
-`prompts/politicas/logs.txt`). Testes em `src/tests/test_web_app.py` e
-`src/tests/test_web_service_relatorios.py`.
+o Zabbix, tentativa de login inválida, consultas lentas > 5s — ver
+`src/logging_util.py` e `prompts/politicas/logs.txt`). Testes em
+`src/tests/test_web_app.py`, `src/tests/test_web_service_relatorios.py`,
+`src/tests/test_auth.py` e `src/tests/test_db.py`.
+
+Para revogar o acesso de alguém sem apagar o histórico:
+`python scripts/desativar_usuario.py <nome_usuario>`.
 
 Cada linha do ranking é clicável e leva a `GET /historico?periodo=...&visao=...&chave=...`
 — histórico de ocorrências daquele problema/host: quando cada uma
@@ -145,6 +169,11 @@ Idempotente. Ver
 python scripts/aplicar_exclusao_googleupdater.py
 ```
 
+### `aplicar_migrations.py`, `criar_usuario.py`, `desativar_usuario.py`
+Gestão do banco próprio do painel (SQLite, `dados/acompanhamento.db`) e
+dos usuários que podem logar — ver seção "Painel web" acima e
+[`docs/adr/006-autenticacao-usuarios-individuais.md`](adr/006-autenticacao-usuarios-individuais.md).
+
 ## Estrutura do projeto
 
 ```
@@ -160,11 +189,13 @@ python scripts/aplicar_exclusao_googleupdater.py
 ├── contexto/                  — conhecimento sobre como o projeto funciona
 ├── docs/                       — este README, CHANGELOG
 │   └── adr/                      — uma decisão arquitetural por arquivo
-├── logs/                          — logs de execução
-├── requirements.txt                — dependências externas (flask, waitress)
-├── scripts/                        — os 4 utilitários listados acima
-└── src/                             — zbx_api.py, relatorios_service.py,
-                                      painel web (src/web/) + testes
+├── dados/                          — banco proprio (SQLite, so usuarios
+│   └── migrations/                 do painel hoje) + migrations versionadas
+├── logs/                            — logs de execução
+├── requirements.txt                  — dependências externas (flask, waitress, werkzeug)
+├── scripts/                           — utilitários (relatórios, migrations, usuários)
+└── src/                                — zbx_api.py, relatorios_service.py, db.py,
+                                         painel web (src/web/) + testes
 ```
 
 Detalhe completo de cada pasta:

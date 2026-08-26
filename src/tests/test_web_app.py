@@ -15,14 +15,25 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
+os.environ.setdefault("PAINEL_SECRET_KEY", "chave-de-teste-nao-usar-em-producao")
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web"))
 import app as painel  # noqa: E402
+
+
+def _autenticar(client):
+    """Simula uma sessao logada no cliente de teste, sem precisar de
+    banco real nem passar pelo formulario (ver
+    docs/adr/006-autenticacao-usuarios-individuais.md)."""
+    with client.session_transaction() as sess:
+        sess["usuario"] = "teste"
 
 
 class TestPaginaRelatorios(unittest.TestCase):
 
     def setUp(self):
         self.client = painel.app.test_client()
+        _autenticar(self.client)
 
     @patch("app.dados_periodo")
     @patch("app.call")
@@ -134,6 +145,7 @@ class TestPaginaHistorico(unittest.TestCase):
 
     def setUp(self):
         self.client = painel.app.test_client()
+        _autenticar(self.client)
 
     def test_sem_chave_mostra_mensagem_amigavel(self):
         resp = self.client.get("/historico?periodo=7d&visao=problema")
@@ -245,6 +257,7 @@ class TestApiRelatoriosDados(unittest.TestCase):
 
     def setUp(self):
         self.client = painel.app.test_client()
+        _autenticar(self.client)
 
     @patch("api.dados_periodo")
     def test_periodo_valido_devolve_envelope_ok(self, mock_dados):
@@ -290,6 +303,7 @@ class TestApiRelatoriosHistorico(unittest.TestCase):
 
     def setUp(self):
         self.client = painel.app.test_client()
+        _autenticar(self.client)
 
     @patch("api.historico_grupo")
     def test_chave_valida_devolve_envelope_ok(self, mock_hist):
@@ -322,6 +336,74 @@ class TestApiRelatoriosHistorico(unittest.TestCase):
         body = resp.get_json()
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(body["ok"])
+
+
+class TestLogin(unittest.TestCase):
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+
+    @patch("app.verificar_credenciais")
+    def test_credenciais_validas_cria_sessao_e_redireciona(self, mock_verificar):
+        mock_verificar.return_value = True
+        resp = self.client.post("/login", data={"nome_usuario": "paulo", "senha": "certa"})
+        self.assertEqual(resp.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["usuario"], "paulo")
+
+    @patch("app.verificar_credenciais")
+    def test_credenciais_invalidas_mostra_erro_generico(self, mock_verificar):
+        mock_verificar.return_value = False
+        resp = self.client.post("/login", data={"nome_usuario": "paulo", "senha": "errada"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Usuario ou senha invalidos", resp.data)
+
+    @patch("app.verificar_credenciais")
+    def test_login_redireciona_para_proximo(self, mock_verificar):
+        mock_verificar.return_value = True
+        resp = self.client.post("/login?proximo=/historico", data={"nome_usuario": "paulo", "senha": "certa"})
+        self.assertEqual(resp.headers["Location"], "/historico")
+
+    def test_logout_limpa_sessao(self):
+        _autenticar(self.client)
+        resp = self.client.post("/logout")
+        self.assertEqual(resp.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("usuario", sess)
+
+
+class TestProtecaoDeRotas(unittest.TestCase):
+    """Sem sessao, rotas de pagina redirecionam para /login e rotas de
+    API devolvem 401 (ver docs/adr/006-autenticacao-usuarios-individuais.md
+    e specs/autenticacao_painel.md). /health continua aberto."""
+
+    def setUp(self):
+        self.client = painel.app.test_client()
+
+    def test_pagina_inicial_sem_sessao_redireciona_para_login(self):
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp.headers["Location"])
+
+    def test_historico_sem_sessao_redireciona_para_login(self):
+        resp = self.client.get("/historico?chave=X")
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login", resp.headers["Location"])
+
+    def test_api_dados_sem_sessao_devolve_401(self):
+        resp = self.client.get("/api/relatorios/dados")
+        self.assertEqual(resp.status_code, 401)
+        self.assertFalse(resp.get_json()["ok"])
+
+    def test_api_historico_sem_sessao_devolve_401(self):
+        resp = self.client.get("/api/relatorios/historico?chave=X")
+        self.assertEqual(resp.status_code, 401)
+
+    @patch("app.call")
+    def test_health_sem_sessao_continua_acessivel(self, mock_call):
+        mock_call.return_value = {"result": "7.4.4"}
+        resp = self.client.get("/health")
+        self.assertEqual(resp.status_code, 200)
 
 
 if __name__ == "__main__":

@@ -12,9 +12,12 @@
 <style>
   *{box-sizing:border-box}
   body{font-family:Segoe UI,Arial,sans-serif;color:#222;margin:0;background:#f7f8fa}
-  header{background:#fff;border-bottom:1px solid #e3e6ea;padding:14px 24px}
+  header{background:#fff;border-bottom:1px solid #e3e6ea;padding:14px 24px;position:relative}
   header h1{margin:0;font-size:20px}
   header .sub{color:#666;font-size:13px;margin-top:2px}
+  .sessao{position:absolute;top:14px;right:24px;font-size:12px;color:#666}
+  .sessao button{background:none;border:none;padding:0;margin-left:6px;color:#2b6cb0;
+    text-decoration:underline;cursor:pointer;font:inherit}
   main{padding:24px;max-width:1100px;margin:0 auto}
   nav.periodos{margin-bottom:10px}
   nav.periodos a{display:inline-block;padding:6px 14px;margin-right:6px;border-radius:6px;
@@ -61,6 +64,14 @@
 </head>
 <body>
 <header>
+  {% if session.usuario %}
+  <div class="sessao">
+    {{ session.usuario }}
+    <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+      <button type="submit">sair</button>
+    </form>
+  </div>
+  {% endif %}
   <h1>Acompanhamento Zabbix — Grupo Rancho</h1>
   <div class="sub">{% block subtitulo %}{% endblock %}</div>
 </header>

@@ -10,22 +10,27 @@ autoatualiza no mesmo intervalo do cache (meta refresh — ver
 prompts/tarefas/frontend.txt, item 18, "painel de TV"), preservando
 periodo e visao selecionados na querystring. Duas visoes de ranking (por
 problema ou por host — ver specs/ranking_por_host.md), cada uma com um
-grafico de barras alem da tabela detalhada. Sem autenticacao (ver
-specs/dashboard.md e docs/adr/005-painel-web-flask.md).
+grafico de barras alem da tabela detalhada. Exige login (usuario
+individual — ver docs/adr/006-autenticacao-usuarios-individuais.md e
+specs/autenticacao_painel.md); /health continua aberto.
 
 Uso:
+  python scripts/aplicar_migrations.py   (uma vez, cria o banco)
+  python scripts/criar_usuario.py <nome>  (uma vez por pessoa)
   python src/web/app.py
   (sobe via waitress, o mesmo modo usado em producao — nunca o servidor
   de debug do Flask, ver prompts/tarefas/backend.txt item 13)
 
 Configuracao via variavel de ambiente (ver prompts/politicas/configuracao.txt):
   ZBX_URL, ZBX_TOKEN — obrigatorias, lidas por src/zbx_api.py
+  PAINEL_SECRET_KEY — obrigatoria, assina o cookie de sessao (nunca
+                      hardcoded — ver prompts/politicas/seguranca.txt)
   PAINEL_HOST — default 127.0.0.1 (rede interna; nunca 0.0.0.0 sem decisao
                 deliberada, ver prompts/politicas/seguranca.txt item 10)
   PAINEL_PORT — default 8080
 
 Dependencia: flask, waitress (ver requirements.txt e
-docs/adr/005-painel-web-flask.md).
+docs/adr/005-painel-web-flask.md e docs/adr/006-autenticacao-usuarios-individuais.md).
 """
 
 import os
@@ -36,9 +41,10 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from flask import Flask, render_template, request  # noqa: E402
+from flask import Flask, redirect, render_template, request, session, url_for  # noqa: E402
 
 from api import bp_api  # noqa: E402
+from auth import login_required, verificar_credenciais  # noqa: E402
 from logging_util import configurar_logging  # noqa: E402
 from relatorios_service import (  # noqa: E402
     PERIODOS, TITULOS_PERIODO, SEV_NOME, SEV_COR, fmt_ts, fmt_duracao,
@@ -53,6 +59,7 @@ from zbx_api import call  # noqa: E402
 # =========================================================================
 PAINEL_HOST = os.environ.get("PAINEL_HOST", "127.0.0.1")
 PAINEL_PORT = int(os.environ.get("PAINEL_PORT", "8080"))
+PAINEL_SECRET_KEY = os.environ.get("PAINEL_SECRET_KEY", "")
 TOP_N = 20            # quantas linhas a tabela mostra
 TOP_N_GRAFICO = 10    # quantas barras o grafico de ranking mostra (ver specs/ranking_por_host.md)
 LIMIAR_LENTIDAO_SEGUNDOS = 5  # acima disso, loga WARNING (prompts/politicas/monitoramento.txt, item 7)
@@ -62,7 +69,13 @@ TITULOS_VISAO = {"problema": "Por problema", "host": "Por host"}
 
 log = configurar_logging("painel_web")
 
+if not PAINEL_SECRET_KEY:
+    print("[FALHA] PAINEL_SECRET_KEY nao definida. Defina essa variavel de ambiente "
+          "(qualquer texto longo e aleatorio) antes de subir o painel — ver .env.example.")
+    sys.exit(1)
+
 app = Flask(__name__)
+app.secret_key = PAINEL_SECRET_KEY
 app.register_blueprint(bp_api)
 
 
@@ -128,6 +141,7 @@ def resumo_historico(itens: list[dict]) -> dict:
 
 
 @app.route("/", methods=["GET"])
+@login_required
 def pagina_relatorios():
     periodo = request.args.get("periodo", "7d")
     if periodo not in PERIODOS:
@@ -176,6 +190,7 @@ def pagina_relatorios():
 
 
 @app.route("/historico", methods=["GET"])
+@login_required
 def pagina_historico():
     """Drill-down de uma linha do ranking: quando cada ocorrencia comecou,
     quando terminou e quanto durou — ver specs/historico_ocorrencias.md."""
@@ -230,6 +245,31 @@ def pagina_historico():
     contexto["grafico_dias"] = montar_grafico_dias(itens)
     contexto["resumo"] = resumo_historico(itens)
     return render_template("historico.html", **contexto)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Ver specs/autenticacao_painel.md. Mensagem de erro sempre generica
+    (nunca revela se o usuario existe) — tentativa invalida vira WARNING
+    no log, sem a senha."""
+    erro = None
+    if request.method == "POST":
+        nome_usuario = request.form.get("nome_usuario", "")
+        senha = request.form.get("senha", "")
+        if verificar_credenciais(nome_usuario, senha):
+            session.clear()
+            session["usuario"] = nome_usuario
+            proximo = request.args.get("proximo") or url_for("pagina_relatorios")
+            return redirect(proximo)
+        log.warning("Tentativa de login invalida: usuario=%s", nome_usuario)
+        erro = "Usuario ou senha invalidos."
+    return render_template("login.html", erro=erro)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 @app.route("/health", methods=["GET"])

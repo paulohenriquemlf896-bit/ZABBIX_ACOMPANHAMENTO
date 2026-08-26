@@ -47,8 +47,8 @@ anteriores (o histórico de mudança de estado vive no
   `GET /api/relatorios/dados`. Servido via `waitress`
   (`python src/web/app.py`). Logging estruturado em `logs/painel_web.log`
   (`src/logging_util.py` — inicio, falha de comunicacao com o Zabbix,
-  consultas > 5s como WARNING). Sem autenticação (fora de escopo desta
-  primeira versão, ver `specs/dashboard.md`). Testes em
+  consultas > 5s como WARNING). Exige login desde 2026-08-26 — ver
+  entrada própria abaixo. Testes em
   `src/tests/test_web_app.py` e `src/tests/test_web_service_relatorios.py`
   (29 casos, offline). Ver `docs/adr/005-painel-web-flask.md`.
 - **Auto-atualização do painel** — a página se atualiza sozinha a cada
@@ -83,17 +83,33 @@ anteriores (o histórico de mudança de estado vive no
   Suite completa do projeto: 114 testes. Validado manualmente contra o
   Zabbix real em 2026-07-28 (o total do histórico bateu exatamente com o
   total mostrado na linha do ranking que originou o clique).
+- **Autenticação do painel por usuário individual** — `/login`/`/logout`,
+  todas as rotas de página e API exigem sessão (`/health` continua
+  aberto). Primeiro banco de dados próprio do projeto (SQLite,
+  `dados/acompanhamento.db`, schema versionado em `dados/migrations/`,
+  aplicado por `scripts/aplicar_migrations.py`). Usuários criados via
+  `scripts/criar_usuario.py` (sem autocadastro), desativados via
+  `scripts/desativar_usuario.py`. Senha com hash `werkzeug.security`
+  (já vinha com o Flask, não é dependência nova). Decisão registrada em
+  `docs/adr/006-autenticacao-usuarios-individuais.md`, spec em
+  `specs/autenticacao_painel.md`. Testes em `src/tests/test_db.py` e
+  `src/tests/test_auth.py`, mais os testes de rota atualizados em
+  `src/tests/test_web_app.py`. Suite completa do projeto: 129 testes.
+  Validado manualmente contra o Zabbix real em 2026-08-26 (fluxo
+  completo: login inválido, login válido, rota protegida com e sem
+  sessão, `/health` aberto, logout).
 
 ## Funcionalidades em andamento
 
-- Nenhuma no momento (última tarefa concluída: histórico de ocorrências
-  no painel, 2026-07-28).
+- Nenhuma no momento (última tarefa concluída: autenticação do painel
+  por usuário individual, 2026-08-26).
 
 ## Funcionalidades futuras (planejadas, com spec já escrita)
 
 - **Painel web — próximas etapas** (fora do escopo inicial, ver
   `specs/dashboard.md`, seção "Fora de escopo desta primeira versão"):
-  autenticação, edição de configuração pela interface.
+  edição de configuração pela interface. Autenticação já implementada
+  (ver acima) — removida desta lista.
 - **Envio automático de relatório por e-mail** — spec em
   `specs/notificacoes.md`. Não iniciado. Infra SMTP do domínio
   `gruporanchoalegre.com.br` (Locaweb) já validada em outro contexto do
@@ -181,7 +197,11 @@ Ver `prompts/workflow/roadmap.txt` para o processo. Itens atuais:
 - Nenhuma integração além do Zabbix está implementada (GLPI, e-mail,
   Telegram, Teams, WhatsApp, Proxmox — todas planejadas, ver
   `contexto/integracoes.md`).
-- Sem banco de dados próprio — toda saída é arquivo (HTML/CSV).
+- Banco de dados próprio existe desde 2026-08-26, mas só para usuários
+  do painel (autenticação) — dados de monitoramento continuam vindo
+  sempre do Zabbix ao vivo, nunca duplicados localmente (ver
+  `prompts/tarefas/banco_de_dados.txt`, item 1). Saída de relatório
+  continua sendo arquivo (HTML/CSV).
 
 ## Observações importantes
 

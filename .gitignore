@@ -1,6 +1,5 @@
 .env
 *.db
-/dados
 /scripts/saidas
 /logs/*.log
 __pycache__/

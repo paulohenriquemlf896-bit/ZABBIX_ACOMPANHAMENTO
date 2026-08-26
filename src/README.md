@@ -19,9 +19,12 @@ src/
 ├── logging_util.py          — configuracao de logging padrao do projeto
 │                            para processos de longa duracao (ver
 │                            prompts/politicas/logs.txt)
+├── db.py                     — acesso ao banco proprio (SQLite, so
+│                            usuarios do painel hoje — ver docs/adr/006)
 ├── web/                     — painel Flask (ver docs/adr/005 e
 │   ├── app.py               specs/dashboard.md)
 │   ├── api.py
+│   ├── auth.py                — login/sessao (ver docs/adr/006)
 │   ├── services/relatorios.py  — cache de 60s sobre relatorios_service.py
 │   └── templates/
 └── tests/
@@ -30,7 +33,9 @@ src/
     ├── test_web_service_relatorios.py
     ├── test_web_app.py
     ├── test_relatorio_problemas_apresentacao.py
-    └── test_aplicar_exclusao_googleupdater.py
+    ├── test_aplicar_exclusao_googleupdater.py
+    ├── test_db.py
+    └── test_auth.py
 ```
 
 `zbx_api.py` e `relatorios_service.py` são importados pelos scripts de
@@ -40,9 +45,12 @@ src/
 python -m unittest discover src/tests
 ```
 
-Rodar o painel:
+Rodar o painel (primeira vez, cria banco e usuário — ver
+`docs/README.md` para o passo a passo completo):
 
 ```bash
 pip install -r requirements.txt
+python scripts/aplicar_migrations.py
+python scripts/criar_usuario.py SEU_NOME
 python src/web/app.py
 ```

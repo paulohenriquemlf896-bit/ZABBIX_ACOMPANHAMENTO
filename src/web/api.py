@@ -18,6 +18,7 @@ from services.relatorios import dados_periodo, historico_grupo, VISOES, CHAVE_MA
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from logging_util import configurar_logging  # noqa: E402
+from auth import api_login_required  # noqa: E402
 
 from flask import Blueprint, jsonify, request
 
@@ -30,6 +31,7 @@ bp_api = Blueprint("api", __name__, url_prefix="/api")
 
 
 @bp_api.route("/relatorios/dados", methods=["GET"])
+@api_login_required
 def relatorios_dados():
     """Dados agregados de um periodo/visao (para uso futuro de
     atualizacao via JS, ou consumo programatico). A pagina principal ja
@@ -65,6 +67,7 @@ def relatorios_dados():
 
 
 @bp_api.route("/relatorios/historico", methods=["GET"])
+@api_login_required
 def relatorios_historico():
     """Historico de ocorrencias (drill-down) de um problema/host
     especifico — ver specs/historico_ocorrencias.md."""

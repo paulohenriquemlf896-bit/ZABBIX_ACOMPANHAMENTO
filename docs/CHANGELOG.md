@@ -5,6 +5,65 @@ inversa (mais recente primeiro). Mudanças de configuração aplicadas
 diretamente no Zabbix também entram aqui — ver
 [`prompts/politicas/documentacao.txt`](../prompts/politicas/documentacao.txt).
 
+## 2026-08-26 (1) — Autenticação do painel por usuário individual
+
+- **Pedido do usuário**: o painel passou a ser acessado por outra pessoa
+  da equipe pela rede interna, o que tornou a falta de autenticação um
+  problema real (antes era só uso local). Escolhida a opção de usuários
+  individuais (rastreabilidade) em vez de senha única compartilhada —
+  decisão registrada em
+  [`docs/adr/006-autenticacao-usuarios-individuais.md`](../docs/adr/006-autenticacao-usuarios-individuais.md),
+  spec em [`specs/autenticacao_painel.md`](../specs/autenticacao_painel.md).
+- **Primeiro banco de dados próprio do projeto**: SQLite em
+  `dados/acompanhamento.db`, schema versionado por migrations numeradas
+  em `dados/migrations/` (`001_criacao_inicial.sql` — tabela `usuario`),
+  aplicadas por `scripts/aplicar_migrations.py` (novo). `src/db.py`
+  criado como ponto único de acesso (`conectar()`, `PRAGMA
+  foreign_keys=ON`, `row_factory=sqlite3.Row`).
+- **`.gitignore` ajustado**: a linha genérica `/dados` foi trocada — o
+  `.db` continua ignorado (`*.db` já cobria isso), mas
+  `dados/migrations/*.sql` agora é versionado (é código de schema, não
+  dado).
+- **Gestão de usuário sem autocadastro**: `scripts/criar_usuario.py`
+  (senha oculta via `getpass`, hash `werkzeug.security` antes de
+  gravar — já vinha com o Flask, não é dependência nova, só passou a
+  ser importada diretamente e por isso entrou em `requirements.txt`) e
+  `scripts/desativar_usuario.py` (revoga sem apagar o registro).
+- **`src/web/auth.py` criado**: `verificar_credenciais()` (mensagem
+  sempre genérica, não revela se o usuário existe — nem se está
+  desativado), `login_required` (rotas de página, redireciona para
+  `/login?proximo=...`) e `api_login_required` (rotas `/api/...`,
+  devolve `401` JSON em vez de redirecionar).
+- **Rotas novas**: `GET/POST /login`, `POST /logout`. Todas as rotas
+  existentes (`/`, `/historico`, `/api/relatorios/dados`,
+  `/api/relatorios/historico`) passaram a exigir sessão. `/health`
+  continua aberto (uso por ferramentas de monitoramento externas, não
+  expõe dado sensível).
+- **`PAINEL_SECRET_KEY` obrigatória**: painel recusa subir (mensagem
+  `[FALHA]` clara) se a variável de ambiente não estiver definida —
+  nunca roda com sessão insegura por omissão.
+- Indicador de sessão no cabeçalho (`base.html`): nome do usuário logado
+  + botão "sair". Template novo `login.html`.
+- Todos os testes de rota existentes em `src/tests/test_web_app.py`
+  foram atualizados para autenticar a sessão do cliente de teste antes
+  de exercitar as rotas protegidas (helper `_autenticar()`, via
+  `session_transaction()` do Flask — sem precisar de banco real).
+  Testes novos: `src/tests/test_db.py`, `src/tests/test_auth.py`,
+  `TestLogin` e `TestProtecaoDeRotas` em `test_web_app.py` (login
+  válido/inválido, logout, cada rota protegida sem sessão, `/health`
+  continua acessível).
+- Suite completa: **129 testes**, 100% offline. Validado manualmente
+  contra o painel real: usuário de teste criado direto no banco (o
+  `getpass` do script não funciona bem com stdin via pipe neste
+  ambiente de validação — o script em si continua interativo,
+  normalmente), login inválido, login válido, cookie de sessão
+  liberando `/` e a API, `/health` sem sessão, logout limpando a sessão.
+  Usuário de teste removido ao final.
+- `docs/README.md`, `src/README.md` e `AI_MEMORY.md` atualizados
+  (passo a passo de primeira instalação, "sem banco de dados próprio"
+  deixou de ser uma limitação — agora é só para usuários, dados de
+  monitoramento continuam sempre vindos do Zabbix ao vivo).
+
 ## 2026-07-28 (10) — Histórico de ocorrências (drill-down) no painel
 
 - **Motivado por uma investigação real do usuário**: ao ver a linha
